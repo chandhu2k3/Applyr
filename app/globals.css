@@ -2,9 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: 255 255 255;
-}
+/* Autonomous Precision — ApplyX design system reference */
 body {
-  @apply bg-white text-neutral-900 antialiased;
+  @apply bg-canvas text-ink antialiased;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-applyx border border-hairline bg-white;
+  }
+  .panel-header {
+    @apply border-b border-hairline px-4 py-2.5 font-mono text-[11px] font-medium uppercase tracking-wide text-neutral-500;
+  }
+  .btn-primary {
+    @apply rounded-applyx bg-obsidian px-3.5 py-2 text-[13px] font-medium text-white transition-colors hover:bg-graphite;
+  }
+  .btn-technical {
+    @apply rounded-applyx border border-hairline bg-white px-3.5 py-2 text-[13px] font-medium text-ink transition-colors hover:border-hairlineDark hover:bg-canvas;
+  }
+  .btn-danger {
+    @apply rounded-applyx border border-rose-200 bg-white px-3.5 py-2 text-[13px] font-medium text-critical transition-colors hover:bg-rose-50;
+  }
+  .input-applyx {
+    @apply rounded-applyx border border-hairline bg-white px-2.5 text-[13px] outline-none focus:border-cobalt;
+    height: 38px;
+  }
+  .metric-num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Live pulse dot (active run) */
+@keyframes applyx-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35); }
+  50% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15); }
+}
+.pulse-live {
+  animation: applyx-pulse 2s ease-in-out infinite;
+}
+
+/* Telemetry log viewer */
+.telemetry-log {
+  @apply bg-canvas font-mono text-[11px] leading-5 text-ink;
 }

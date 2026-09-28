@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
 
-export function KillSwitch() {
+export function KillSwitch({ compact = false }: { compact?: boolean }) {
   const [stopped, setStopped] = useState(false);
   return (
     <button
       onClick={() => setStopped((s) => !s)}
-      className={`rounded px-4 py-2 text-sm font-semibold ${stopped ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}
-      title="Global kill switch — stops new application execution"
+      className={`rounded-applyx font-semibold ${compact ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"} ${stopped ? "bg-verified text-white" : "bg-critical text-white"}`}
+      title="Global kill switch — stops new application execution, preserves records"
     >
-      {stopped ? "▶ Resume applications" : "■ STOP ALL APPLICATIONS"}
+      {stopped ? "▶ RESUME APPLICATIONS" : "■ STOP ALL APPLICATIONS"}
     </button>
   );
 }
