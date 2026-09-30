@@ -26,16 +26,23 @@ export class SupabaseStore implements Store {
     };
   }
 
+  // Merge, never replace — same contract as FileStore.
   async setProfile(p: Record<string, string>): Promise<Record<string, string>> {
+    const cur = await this.getProfile();
+    const merged: Record<string, string> = { ...cur };
+    for (const [k, v] of Object.entries(p)) {
+      if (v === "") delete merged[k];
+      else merged[k] = v;
+    }
     await this.db.from("candidate_profiles").upsert({
-      user_id: USER, first_name: p.firstName ?? "", last_name: p.lastName ?? "",
-      email: p.email ?? "", phone: p.phone ?? "", city: p.city ?? "",
-      linkedin: p.linkedin ?? "", github: p.github ?? "", portfolio: p.portfolio ?? "",
-      work_authorization: p.workAuthorization ?? "", sponsorship: p.sponsorship ?? "",
-      skills: p.skills ?? "", experience_years: p.experienceYears ?? "0",
+      user_id: USER, first_name: merged.firstName ?? "", last_name: merged.lastName ?? "",
+      email: merged.email ?? "", phone: merged.phone ?? "", city: merged.city ?? "",
+      linkedin: merged.linkedin ?? "", github: merged.github ?? "", portfolio: merged.portfolio ?? "",
+      work_authorization: merged.workAuthorization ?? "", sponsorship: merged.sponsorship ?? "",
+      skills: merged.skills ?? "", experience_years: merged.experienceYears ?? "0",
       updated_at: now(),
     }, { onConflict: "user_id" });
-    return p;
+    return merged;
   }
 
   async listResumes(): Promise<ResumeRecord[]> {

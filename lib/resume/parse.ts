@@ -1,5 +1,6 @@
 // Resume → profile parsing. Deterministic extractors only — the parser proposes,
 // the user approves. It NEVER invents: anything unfound lands in `missing[]`.
+import { SKILL_VOCABULARY, canonicalSkill } from "@/lib/skills";
 
 export type ParsedProfile = {
   firstName: string; lastName: string; email: string; phone: string;
@@ -32,39 +33,6 @@ export async function extractPdfText(data: Uint8Array): Promise<string> {
   }
   await (doc as unknown as { cleanup(): Promise<void> }).cleanup().catch(() => {});
   return chunks.join("\n");
-}
-
-const SKILL_VOCAB = [
-  "python", "java", "javascript", "typescript", "c++", "c#", "go", "golang", "rust", "kotlin", "swift", "php", "ruby", "sql",
-  "react", "next.js", "nextjs", "angular", "vue", "vue.js", "html", "css", "tailwind", "tailwindcss", "bootstrap", "redux",
-  "node.js", "nodejs", "node", "express", "express.js", "django", "flask", "fastapi", "spring", "spring boot", ".net",
-  "mongodb", "postgresql", "postgres", "mysql", "redis", "elasticsearch", "firebase", "supabase", "prisma",
-  "pandas", "numpy", "scikit-learn", "sklearn", "tensorflow", "pytorch", "keras", "excel", "tableau", "power bi",
-  "git", "github", "docker", "kubernetes", "aws", "gcp", "azure", "jenkins", "ci/cd", "linux", "figma", "jira", "postman",
-  "dsa", "data structures", "algorithms", "oops", "oop", "dbms", "operating systems", "computer networks",
-  "roadmap", "prd", "user stories", "a/b testing", "wireframing", "product analytics", "sql", "stakeholder",
-  "machine learning", "deep learning", "nlp", "computer vision", "rest api", "rest apis", "graphql", "microservices",
-];
-
-const CANONICAL: Record<string, string> = {
-  nodejs: "Node", "node.js": "Node", node: "Node", nextjs: "Next.js", "next.js": "Next.js",
-  "express.js": "Express", postgres: "PostgreSQL", postgresql: "PostgreSQL", "power bi": "Power BI",
-  "a/b testing": "A/B testing", "spring boot": "Spring Boot", "vue.js": "Vue", dsa: "DSA",
-  oops: "OOP", oop: "OOP", dbms: "DBMS", "operating systems": "OS", "computer networks": "Networking",
-  "data structures": "DSA", "rest apis": "REST APIs", "rest api": "REST APIs", prd: "PRD",
-  "user stories": "User Stories", roadmap: "Roadmapping", golang: "Go", "scikit-learn": "scikit-learn",
-  sklearn: "scikit-learn",   "tailwindcss": "Tailwind", tailwind: "Tailwind", "ci/cd": "CI/CD",
-  sql: "SQL", html: "HTML", css: "CSS", aws: "AWS", gcp: "GCP", azure: "Azure",
-  github: "GitHub", javascript: "JavaScript", typescript: "TypeScript",
-  mongodb: "MongoDB", mysql: "MySQL", graphql: "GraphQL", linux: "Linux",
-  docker: "Docker", kubernetes: "Kubernetes", python: "Python", java: "Java",
-  "c++": "C++", "c#": "C#", react: "React", django: "Django", flask: "Flask",
-};
-
-function canonical(skill: string): string {
-  const k = skill.toLowerCase();
-  if (CANONICAL[k]) return CANONICAL[k];
-  return skill.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function esc(s: string): string {
@@ -101,11 +69,11 @@ export function parseResumeProfile(rawText: string): ParseResult {
     }
   }
 
-  // Skills from vocabulary.
+  // Skills from the shared vocabulary (same list the matcher scores with).
   const found = new Set<string>();
-  for (const skill of SKILL_VOCAB) {
+  for (const skill of SKILL_VOCABULARY) {
     if (new RegExp(`(?<![\\w+#./-])${esc(skill.toLowerCase())}(?![\\w+#./-])`, "i").test(lower)) {
-      found.add(canonical(skill));
+      found.add(canonicalSkill(skill));
     }
   }
   p.skills = Array.from(found).sort();

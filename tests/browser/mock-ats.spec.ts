@@ -32,6 +32,13 @@ test("executor fills marker-decorated labels (Greenhouse-style First Name⚡)", 
   expect(await page.locator('input[name="em"]').inputValue()).toBe("a@b.c");
 });
 
+test("executor reads the on-page h1 as the job title", async ({ page }) => {
+  await page.setContent("<h1>Senior Backend Engineer — Acme</h1><title>Jobs at Acme</title>");
+  const ex = new BrowserExecutor();
+  ex.attach(page);
+  expect(await ex.pageHeading()).toBe("Senior Backend Engineer — Acme");
+});
+
 test("mock simple: agent BLOCKS on unknown required CTC (never guesses)", async ({ page }) => {
   await page.goto("/mock-ats/simple");
   const fields = await page.evaluate(() =>

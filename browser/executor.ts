@@ -48,7 +48,18 @@ export class BrowserExecutor implements FormDriver {
   }
 
   async navigate(target: string): Promise<void> {
-    await this.req().goto(target, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const page = this.req();
+    await page.goto(target, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    // JS ATS pages (Greenhouse job-boards) render after load: settle on
+    // network idle, then on stable body text, before any extraction.
+    await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => {});
+    let last = -1;
+    for (let i = 0; i < 10; i++) {
+      const len = await page.evaluate(() => document.body.innerText.length).catch(() => 0);
+      if (len === last && len > 500) break;
+      last = len;
+      await page.waitForTimeout(500);
+    }
     this.actions.push(`navigate ${target}`);
   }
 
@@ -141,6 +152,17 @@ export class BrowserExecutor implements FormDriver {
 
   async pageTitle(): Promise<string> {
     return this.req().title();
+  }
+
+  // First meaningful h1 — Greenhouse-style pages title the tab generically
+  // ("Jobs at Yext") while the real role sits in the heading.
+  async pageHeading(): Promise<string> {
+    return this.req().evaluate(() => {
+      const h1 = Array.from(document.querySelectorAll("h1"))
+        .map((h) => (h.textContent ?? "").trim())
+        .find((t) => t.length > 3 && t.length < 160);
+      return h1 ?? "";
+    }).catch(() => "");
   }
 
   async screenshot(name: string): Promise<string> {

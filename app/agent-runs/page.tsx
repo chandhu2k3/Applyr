@@ -18,7 +18,7 @@ export default async function RunsPage() {
         <div key={r.id} className="panel">
           <div className="panel-header flex items-center justify-between">
             <span className="font-mono normal-case tracking-normal">{r.id.slice(-8)} · {r.jobTitle || "analysis"} · {new Date(r.createdAt).toLocaleString()}</span>
-            <Badge tone={r.status === "done" ? "verified" : r.status === "blocked" ? "blocked" : "running"}>{r.status} · {r.stage}</Badge>
+            <Badge tone={r.status === "done" ? "verified" : r.status === "blocked" ? "blocked" : r.status === "skipped" ? "draft" : "running"}>{r.status} · {r.stage}</Badge>
           </div>
           <div className="telemetry-log space-y-0.5 p-4">
             {r.events.length === 0 ? <p className="text-neutral-400">No events.</p> :

@@ -15,6 +15,17 @@ describe("file store (real persistence)", () => {
     await s.setProfile({ firstName: "Ada", email: "a@b.c" });
     expect((await s.getProfile()).firstName).toBe("Ada");
   });
+  it("profile updates merge — partial writes never wipe", async () => {
+    const s = fresh();
+    await s.setProfile({ firstName: "Ada", email: "a@b.c", skills: "Go, Rust" });
+    await s.setProfile({ phone: "123" });
+    const p = await s.getProfile();
+    expect(p.firstName).toBe("Ada");
+    expect(p.skills).toBe("Go, Rust");
+    expect(p.phone).toBe("123");
+    await s.setProfile({ phone: "" });
+    expect((await s.getProfile()).phone).toBeUndefined();
+  });
   it("resumes + answers + policy + settings", async () => {
     const s = fresh();
     const r = await s.createResume({ name: "SDE", roleFamily: "SDE", version: 1, storageProvider: "local", storageKey: "k", mimeType: "application/pdf", fileSize: 10, active: true, isDefault: true, keywords: [] });

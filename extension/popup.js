@@ -181,6 +181,11 @@ $("cta").onclick = async () => {
     const out = e.out;
     cta.disabled = false;
     cta.textContent = "Analyze this page";
+    if (out?.decision === "SKIP") {
+      if (out?.job) showJobCard(out, {});
+      verdict.innerHTML = `<span class="muted">○ Skipped — weak fit, recorded quietly.\n${(out?.match?.reasons ?? []).join(" · ")}\nNothing was filled. Nothing was submitted.</span>`;
+      return;
+    }
     cta.classList.add("blocked");
     if (out?.job) showJobCard(out, {});
     const why = out?.page?.unmappedRequired?.length ? `Unknown required: ${out.page.unmappedRequired.join(", ")}` : (out?.match?.reasons ?? []).join(" · ") || e.message;

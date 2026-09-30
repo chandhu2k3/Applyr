@@ -1,7 +1,9 @@
 import { evaluatePolicy, type Policy } from "@/lib/policy/engine";
+import { computeFit, SKIP_FLOOR, type FitMetric } from "@/lib/decision/metrics";
 import type { JobAnalysis } from "@/lib/ai/schemas";
 
-// CandidateMatcherAgent — semantic fit scoring feeding the deterministic policy engine.
+// CandidateMatcherAgent — thin orchestration over the decision model.
+// Fit math lives in lib/decision/metrics; permission in lib/policy/engine.
 
 export type MatchInput = {
   job: JobAnalysis;
@@ -13,40 +15,35 @@ export type MatchResult = {
   confidence: number;
   reasons: string[];
   skillOverlap: string[];
+  metrics: FitMetric[];
   decision: "APPLY" | "SKIP" | "BLOCK";
 };
 
-const SKILL_TOKENS = ["react", "node", "python", "java", "typescript", "sql", "figma", "roadmap", "a/b", "excel", "git", "aws", "product", "api", "dsa"];
-
-export function scoreFit(input: MatchInput): { confidence: number; reasons: string[]; skillOverlap: string[] } {
-  const reasons: string[] = [];
-  const hay = `${input.job.title} ${input.job.description}`.toLowerCase();
-  const overlap = SKILL_TOKENS.filter((s) => hay.includes(s) && input.candidateSkills.map((c) => c.toLowerCase()).includes(s));
-  let score = 0.4; // base: page is a real job
-  if (overlap.length > 0) {
-    score += Math.min(0.3, overlap.length * 0.1);
-    reasons.push(`skill overlap: ${overlap.join(", ")}`);
-  } else reasons.push("no direct skill overlap");
-  if (input.candidateExperienceYears <= 2) {
-    score += 0.1;
-    reasons.push("experience in 0–2y band");
-  }
-  if (input.job.roleFamily === "PM" || input.job.roleFamily === "SDE") {
-    score += 0.1;
-    reasons.push(`supported family ${input.job.roleFamily}`);
-  } else reasons.push(`unsupported family ${input.job.roleFamily}`);
-  return { confidence: Math.min(0.98, score), reasons, skillOverlap: overlap };
-}
-
 export function matchCandidate(input: MatchInput, policy: Policy, resumeAvailable: boolean): MatchResult {
-  const fit = scoreFit(input);
+  const fit = computeFit({
+    title: input.job.title,
+    description: input.job.description,
+    roleFamily: input.job.roleFamily,
+    enabledFamilies: [...policy.enabledRoleFamilies],
+    candidateSkills: input.candidateSkills,
+    candidateExperienceYears: input.candidateExperienceYears,
+    maxExperienceYears: policy.maxExperienceYears,
+  });
+  // Job-analysis uncertainty caps fit — kept visible as its own reason.
+  const confidence = Math.min(fit.confidence, input.job.confidence);
   const verdict = evaluatePolicy(policy, {
     roleFamily: input.job.roleFamily,
     employmentType: input.job.employmentType,
     experienceYears: input.candidateExperienceYears,
     location: input.job.location,
-    confidence: Math.min(fit.confidence, input.job.confidence),
+    confidence,
     resumeAvailable,
   });
-  return { ...fit, decision: verdict.decision === "APPLY" ? "APPLY" : "BLOCK", reasons: [...fit.reasons, ...verdict.reasons] };
+  if (verdict.decision === "APPLY") {
+    return { confidence, reasons: [...fit.reasons, "policy: all checks pass"], skillOverlap: fit.skillOverlap, metrics: fit.metrics, decision: "APPLY" };
+  }
+  if (verdict.failedChecks.length === 0 && confidence >= SKIP_FLOOR) {
+    return { confidence, reasons: [...fit.reasons, `below apply threshold ${policy.minConfidence} — skipped quietly`, ...verdict.reasons], skillOverlap: fit.skillOverlap, metrics: fit.metrics, decision: "SKIP" };
+  }
+  return { confidence, reasons: [...fit.reasons, ...verdict.reasons], skillOverlap: fit.skillOverlap, metrics: fit.metrics, decision: "BLOCK" };
 }

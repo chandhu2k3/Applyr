@@ -42,8 +42,8 @@ export async function POST(req: Request) {
         ? selectResumeDeterministic({ title: job.title, description: job.description }, body.resumes ?? [])
         : null;
     const ok = match.decision === "APPLY" && resume !== null;
-    log(ok ? "MATCH" : "BLOCKED", `${job.title} → ${match.decision}${resume ? ` · ${resume.resumeId}` : ""}`);
-    if (run) await store.finishRun(run.id, ok ? "done" : "blocked", "analyze").catch(() => {});
+    log(match.decision === "SKIP" ? "SKIP" : ok ? "MATCH" : "BLOCKED", `${job.title} → ${match.decision}${resume ? ` · ${resume.resumeId}` : ""}`);
+    if (run) await store.finishRun(run.id, match.decision === "SKIP" ? "skipped" : ok ? "done" : "blocked", "analyze").catch(() => {});
     return NextResponse.json({
       ok,
       decision: match.decision,

@@ -48,6 +48,7 @@ describe("matcher + answers + rate limit", () => {
     const job = analyzeJob({ title: "Software Engineer Intern", description: "react node python", url: "u" });
     const m = matchCandidate({ job, candidateSkills: ["react", "node"], candidateExperienceYears: 1 }, POLICY, true);
     expect(m.decision).toBe("APPLY");
+    expect(m.metrics.reduce((s, x) => s + x.points, 0)).toBeCloseTo(m.confidence, 5);
   });
   it("BLOCK for senior unsupported", () => {
     const job = analyzeJob({ title: "Senior Designer", description: "figma", url: "u" });

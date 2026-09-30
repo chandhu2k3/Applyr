@@ -64,7 +64,17 @@ export class FileStore implements Store {
   }
 
   async getProfile() { return (await this.load()).profile; }
-  async setProfile(p: Record<string, string>) { const db = await this.load(); db.profile = p; await this.save(); return p; }
+  // Merge, never replace: partial updates (resolve-block, popup) must not
+  // wipe fields they didn't send. Empty string deletes a key explicitly.
+  async setProfile(p: Record<string, string>) {
+    const db = await this.load();
+    for (const [k, v] of Object.entries(p)) {
+      if (v === "") delete db.profile[k];
+      else db.profile[k] = v;
+    }
+    await this.save();
+    return db.profile;
+  }
 
   async listResumes() { return (await this.load()).resumes; }
   async createResume(r: Omit<ResumeRecord, "id" | "createdAt">) {

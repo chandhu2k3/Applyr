@@ -40,6 +40,21 @@ export function classifyEmploymentType(title: string, description: string): stri
   return "Full-time";
 }
 
+// A stale/closed posting must never reach matching — it would score
+// (and confuse) on listing chrome instead of a real description.
+const CLOSED_PATTERNS = [
+  /no longer open/i,
+  /no longer accepting/i,
+  /position has been filled/i,
+  /\bjob (not found|has expired|expired|removed)\b/i,
+  /this posting is closed/i,
+  /applications are (now )?closed/i,
+];
+
+export function detectPostingClosed(text: string): boolean {
+  return CLOSED_PATTERNS.some((re) => re.test(text));
+}
+
 // Company from structured URL patterns first, page title hints second, hostname last.
 export function extractCompany(url: string, pageTitle: string, bodyText: string): string {
   try {

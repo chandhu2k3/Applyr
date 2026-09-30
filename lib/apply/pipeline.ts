@@ -1,6 +1,6 @@
 import { BrowserExecutor } from "@/browser/executor";
 import { analyzePage } from "@/agents/page-analyzer";
-import { analyzeJob, extractCompany } from "@/agents/job-analyzer";
+import { analyzeJob, extractCompany, detectPostingClosed } from "@/agents/job-analyzer";
 import { matchCandidate } from "@/agents/candidate-matcher";
 import { runApplication } from "@/agents/application-agent";
 import { PolicySchema } from "@/lib/policy/engine";
@@ -60,6 +60,7 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
     await ex.navigate(url);
     const snapshot = await ex.snapshotFields();
     const pageTitle = await ex.pageTitle();
+    const heading = await ex.pageHeading();
     const text = await ex.pageText();
     const page = analyzePage({ url, title: pageTitle, bodyText: text, fields: snapshot });
     await log("PAGE", `Platform ${page.platform}, ${snapshot.length} fields`);
@@ -67,8 +68,18 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
       return recordBlocked(store, run.id, "security", `${page.securityBlock} — manual action required`, { company: "", title: pageTitle, location: "", url, platform: page.platform });
     }
 
-    const job = analyzeJob({ title: pageTitle, description: text, url, platform: page.platform });
+    const job = analyzeJob({ title: heading || pageTitle, description: text, url, platform: page.platform });
     job.company = extractCompany(url, pageTitle, text);
+    if (detectPostingClosed(text)) {
+      await log("SKIP", "Posting closed — no longer accepting applications");
+      await store.finishRun(runId, "skipped", "closed").catch(() => {});
+      const closed = await store.createApplication({
+        company: job.company, title: job.title, location: job.location, url, platform: page.platform,
+        resumeId: "", resumeName: "", status: "SKIPPED", verification: "Posting closed — no longer accepting applications",
+        applicationId: null, answers: {}, missingQuestions: [], missingProfile: [],
+      });
+      return { status: "SKIPPED", runId, applicationId: closed.id, detail: { reason: "Posting closed" } };
+    }
     const skills = (profile.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean);
     const expYears = Number(profile.experienceYears ?? 1) || 0;
 
@@ -96,7 +107,17 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
     }
 
     const match = matchCandidate({ job, candidateSkills: skills, candidateExperienceYears: expYears }, policy, storedResumes.length > 0);
-    await log("MATCH", `${job.title} @ ${job.company} [${job.roleFamily}] → ${match.decision}`);
+    await log("MATCH", `${job.title} @ ${job.company} [${job.roleFamily}] → ${match.decision} (${match.confidence.toFixed(2)})`);
+    if (match.decision === "SKIP") {
+      await log("SKIP", match.reasons.join("; "));
+      await store.finishRun(runId, "skipped", "policy").catch(() => {});
+      const app = await store.createApplication({
+        company: job.company, title: job.title, location: job.location, url, platform: page.platform,
+        resumeId: "", resumeName: "", status: "SKIPPED", verification: match.reasons.join("; "),
+        applicationId: null, answers: {}, missingQuestions: [], missingProfile: [],
+      });
+      return { status: "SKIPPED", runId, applicationId: app.id, detail: { reasons: match.reasons, confidence: match.confidence } };
+    }
     if (match.decision !== "APPLY") {
       return recordBlocked(store, run.id, "policy", match.reasons.join("; "), { company: job.company, title: job.title, location: job.location, url, platform: page.platform });
     }
@@ -116,6 +137,7 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
           job: { title: job.title, company: job.company, family: job.roleFamily, confidence: job.confidence },
           match: { confidence: match.confidence, reasons: match.reasons }, resume,
           requiredFields: snapshot.filter((f) => f.required).map((f) => f.label || f.name),
+          textChars: text.length, fieldCount: snapshot.length,
         },
       };
     }

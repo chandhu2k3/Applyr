@@ -18,7 +18,7 @@ export default async function ApplicationsPage() {
             <tr key={a.id} className="border-b border-hairline last:border-0 hover:bg-canvas/60">
               <td className="px-4 py-2.5"><a href={`/applications/${a.id}`} className="font-semibold hover:underline">{a.company}</a><br /><span className="text-neutral-500">{a.title}</span></td>
               <td className="px-4 py-2.5 text-neutral-600">{a.resumeName || "—"}</td>
-              <td className="px-4 py-2.5"><Badge tone={a.status === "SUBMITTED" || a.status === "VERIFIED" ? "verified" : a.status === "BLOCKED" ? "blocked" : a.status === "FAILED" ? "failed" : a.status === "SUPERSEDED" ? "draft" : "submitted"}>{a.status}</Badge></td>
+              <td className="px-4 py-2.5"><Badge tone={a.status === "SUBMITTED" || a.status === "VERIFIED" ? "verified" : a.status === "BLOCKED" ? "blocked" : a.status === "FAILED" ? "failed" : a.status === "SUPERSEDED" || a.status === "SKIPPED" ? "draft" : "submitted"}>{a.status}</Badge></td>
               <td className="metric-num px-4 py-2.5 text-neutral-600">{new Date(a.createdAt).toLocaleString()}</td>
             </tr>
           ))}</tbody>

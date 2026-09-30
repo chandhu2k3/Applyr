@@ -12,6 +12,15 @@ describe("policy engine", () => {
     );
     expect(r.decision).toBe("BLOCK");
   });
+  it("names unknown location honestly instead of 'not allowed'", () => {
+    const r = evaluatePolicy(
+      { enabledRoleFamilies: ["PM","SDE"], allowedEmploymentTypes: ["Internship","Full-time"], maxExperienceYears: 2, allowedLocations: ["Bangalore"], minConfidence: 0.7, maxPerDay: 25, maxPerHour: 5, maxPerCompanyPerDay: 2, killSwitch: false },
+      { roleFamily: "SDE", employmentType: "Internship", experienceYears: 1, location: "", confidence: 0.9, resumeAvailable: true }
+    );
+    expect(r.decision).toBe("BLOCK");
+    expect(r.reasons.join(" ")).toMatch(/unknown/);
+    expect(r.failedChecks).toContain("locationAllowed");
+  });
 });
 
 describe("resume selector", () => {
