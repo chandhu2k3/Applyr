@@ -9,3 +9,5 @@ tsconfig.tsbuildinfo
 .next/
 dev.log
 dev.err.log
+test-results/
+playwright-report/

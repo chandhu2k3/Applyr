@@ -5,11 +5,10 @@ Core flow: open a supported application page → **Apply with Agent** → analyz
 > BLOCK > GUESS · PAUSE > FABRICATE · VERIFY > ASSUME · LOCAL/FREE > PAID when reasonable
 
 ## V1 plan (this repo)
-- [x] Phase 1 foundation: Next.js 14 + TS + Tailwind, 8 routes, Supabase schema (`supabase/migrations/0001_init.sql`), storage abstraction (local default, R2 later), policy/resume/validation/state-machine libs, MV3 extension skeleton
-- [ ] Phase 2 intelligence: page/job analyzers, matcher, AI fallback w/ Zod, answer-bank matcher
-- [ ] Phase 3 local browser agent: Playwright `BrowserExecutor` + greenhouse/lever/google-forms/generic adapters, extension↔local bridge
-- [ ] Phase 4 mock ATS + tests (unit/integration/browser)
-- [ ] Phase 5-6 hardening, runs dashboard, retention + AI-cost visibility
+- [x] Phase 1 foundation: Next.js 14 + TS + Tailwind, routes, Supabase schema, storage abstraction, policy/resume/validation/state-machine, MV3 extension
+- [x] Phase 2 intelligence: page/job analyzers, matcher, AI fallback w/ Zod, answer-bank matcher, `/api/analyze`
+- [x] Phase 3 browser agent: local Playwright `BrowserExecutor` + greenhouse/lever/g-forms/generic adapters, app + verification agents, mock ATS, `apply:local` CLI, browser tests
+- [x] Phase 4 real product: file/Supabase store, real CRUD APIs (profile/resumes/applications/runs/answers/policy/settings), all pages on live data, persisted kill switch, run logging
 
 No job discovery in V1. No Redis/BullMQ. No PDFs in Postgres.
 
