@@ -1,15 +1,76 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><style>
-body{width:340px;margin:0;font:13px Geist,system-ui;color:#090D16}
-.h{padding:12px 14px;border-bottom:1px solid #E2E8F0;font-weight:600}
-.b{padding:12px 14px;display:grid;gap:8px}
-button{background:#0F172A;color:#fff;border:0;border-radius:6px;padding:9px;cursor:pointer;font-weight:500}
-#st{font:11px 'JetBrains Mono',monospace;color:#64748B;white-space:pre-wrap}
+*{box-sizing:border-box}
+body{width:368px;margin:0;font:13px Geist,system-ui,-apple-system;color:#090D16;background:#F8FAFC}
+header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border-bottom:1px solid #E2E8F0}
+.logo{width:26px;height:26px;border-radius:6px;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+.ready{margin-left:auto;display:flex;align-items:center;gap:6px;font:11px 'JetBrains Mono',monospace;color:#059669}
+.dot{width:7px;height:7px;border-radius:50%;background:#059669}
+.gear{border:0;background:none;cursor:pointer;font-size:15px;color:#64748B}
+main{padding:12px 14px;display:grid;gap:10px}
+.card{background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:12px}
+.job h2{margin:0 0 2px;font-size:16px;letter-spacing:-.01em}
+.job .meta{color:#64748B;font-size:12px}
+.row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.chip{font:11px 'JetBrains Mono',monospace;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:99px;padding:2px 8px}
+.score{margin-left:auto;font:11px 'JetBrains Mono',monospace;color:#0F172A}
+.score b{font-size:15px}
+#cta{border:0;border-radius:8px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#10B981,#059669);color:#fff;width:100%}
+#cta:disabled{opacity:.6;cursor:wait}
+#cta.blocked{background:#fff;color:#D97706;border:1px solid #F59E0B}
+#steps{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;font-size:12px}
+#steps li{display:flex;gap:8px;align-items:center;color:#94A3B8}
+#steps li.done{color:#059669}
+#steps li.act{color:#2563EB}
+.sec{font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.sec a{font-weight:400;color:#64748B;text-decoration:none}
+.muted{color:#64748B;font-size:12px}
+#verdict{font-size:12px;white-space:pre-wrap}
+.err{color:#D97706}
+.ok{color:#059669}
+footer{padding:8px 14px 12px;font:11px 'JetBrains Mono',monospace;color:#94A3B8;display:flex;justify-content:space-between}
+footer a{color:#64748B}
+#cmd{font:11px 'JetBrains Mono',monospace;background:#0F172A;color:#E2E8F0;border-radius:6px;padding:8px;word-break:break-all}
+#copy{border:1px solid #E2E8F0;background:#fff;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px}
 </style></head><body>
-<div class="h">🤖 Apply with Agent <span style="font:10px monospace;color:#94A3B8">v0.2.0</span></div>
-<div class="b">
-<button id="go">Analyze this page</button>
-<div id="st">Idle. Open a job/application page, then analyze.</div>
-</div>
+<header>
+  <span class="logo">A</span><b>ApplyX</b>
+  <span class="ready"><span class="dot"></span>Agent Ready</span>
+  <button class="gear" id="gear" title="Open dashboard">⚙</button>
+</header>
+<main>
+  <div class="card job">
+    <div id="jobEmpty" class="muted">Open a job / application page, then analyze.</div>
+    <div id="jobCard" style="display:none">
+      <h2 id="jTitle">—</h2>
+      <div class="meta" id="jMeta">—</div>
+      <div class="row"><span class="chip" id="jPlat">generic</span><span class="score"><b id="jScore">—</b> match</span></div>
+      <div class="row muted">Resume: <b id="jResume" style="color:#090D16">—</b></div>
+    </div>
+  </div>
+  <button id="cta">Analyze this page</button>
+  <ul id="steps" style="display:none">
+    <li id="s-job">○ Job identified</li>
+    <li id="s-resume">○ Resume selected</li>
+    <li id="s-fields">○ Details mapped</li>
+    <li id="s-valid">○ Validation</li>
+    <li id="s-sub">○ Submission</li>
+  </ul>
+  <div class="card">
+    <div class="sec">Your Autofill Information <a href="#" id="openProfile">profile →</a></div>
+    <div class="muted" id="profLine">—</div>
+  </div>
+  <div class="card">
+    <div class="sec">Upload Resume <a href="#" id="openResumes">library →</a></div>
+    <div class="muted" id="resLine">—</div>
+  </div>
+  <div class="card" id="cmdCard" style="display:none">
+    <div class="sec">Run locally to apply</div>
+    <div id="cmd"></div>
+    <div class="row"><button id="copy">Copy command</button></div>
+  </div>
+  <div class="card"><div id="verdict" class="muted">Idle.</div></div>
+</main>
+<footer><span id="cost">0 AI calls · deterministic</span><a href="#" id="openDash">dashboard →</a></footer>
 <script src="popup.js"></script>
 </body></html>

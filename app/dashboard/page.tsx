@@ -11,7 +11,7 @@ function dayStart(): number {
 }
 
 export default async function DashboardPage() {
-  const store = getStore();
+  const store = await getStore();
   const [apps, runs, settings] = await Promise.all([store.listApplications(), store.listRuns(), store.getSettings()]);
   const today = apps.filter((a) => new Date(a.createdAt).getTime() >= dayStart());
   const submitted = apps.filter((a) => a.status === "SUBMITTED" || a.status === "VERIFIED");

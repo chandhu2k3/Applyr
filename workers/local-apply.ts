@@ -21,7 +21,7 @@ if (!url) {
 const headed = process.argv.includes("--headed");
 
 async function main(): Promise<void> {
-  const store = getStore();
+  const store = await getStore();
   if ((await store.getSettings()).killSwitch) {
     console.log(JSON.stringify({ status: "BLOCKED", reason: "Kill switch active" }));
     return;

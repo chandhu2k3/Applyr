@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // PATCH { active?, isDefault?, name? } · DELETE (removes metadata; file retention per settings)
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const patch = await req.json();
-  const store = getStore();
+  const store = await getStore();
   if (patch.isDefault) {
     const all = await store.listResumes();
     const cur = all.find((r) => r.id === params.id);
@@ -26,6 +26,6 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const ok = await getStore().removeResume(params.id);
+  const ok = await (await getStore()).removeResume(params.id);
   return NextResponse.json({ ok }, { status: ok ? 200 : 404 });
 }

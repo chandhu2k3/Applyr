@@ -4,7 +4,7 @@ import { getStore } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ applications: await getStore().listApplications() });
+  return NextResponse.json({ applications: await (await getStore()).listApplications() });
 }
 
 export async function POST(req: Request) {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (!b.company || !b.title || !b.url) {
     return NextResponse.json({ error: "company, title, url required" }, { status: 400 });
   }
-  const rec = await getStore().createApplication({
+  const rec = await (await getStore()).createApplication({
     company: String(b.company).slice(0, 200), title: String(b.title).slice(0, 300),
     location: String(b.location ?? "").slice(0, 200), url: String(b.url).slice(0, 2000),
     platform: String(b.platform ?? "generic").slice(0, 40),

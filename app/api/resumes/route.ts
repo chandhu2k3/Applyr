@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // GET list · POST multipart upload (PDF ≤10MB → object storage, metadata in DB)
 export async function GET() {
-  return NextResponse.json({ resumes: await getStore().listResumes(), storage: getStorage().provider });
+  return NextResponse.json({ resumes: await (await getStore()).listResumes(), storage: getStorage().provider });
 }
 
 export async function POST(req: Request) {
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const buf = new Uint8Array(await file.arrayBuffer());
   const key = buildStorageKey("resume", "local-user", `${name.replace(/\s+/g, "_")}.pdf`);
   const stored = await getStorage().upload(key, buf, file.type || "application/pdf");
-  const store = getStore();
+  const store = await getStore();
   const existing = await store.listResumes();
   const version = Math.max(0, ...existing.filter((r) => r.roleFamily === roleFamily).map((r) => r.version)) + 1;
   const rec = await store.createResume({

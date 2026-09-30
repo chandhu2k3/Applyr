@@ -4,12 +4,12 @@ import { getStore } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ runs: await getStore().listRuns() });
+  return NextResponse.json({ runs: await (await getStore()).listRuns() });
 }
 
 export async function POST(req: Request) {
   const b = await req.json();
-  const store = getStore();
+  const store = await getStore();
   // { event, runId } → append; otherwise create run.
   if (b.runId && b.event) {
     await store.addRunEvent(String(b.runId), { t: new Date().toISOString(), level: String(b.event), msg: String(b.msg ?? b.event) });

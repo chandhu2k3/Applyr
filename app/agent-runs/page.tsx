@@ -4,7 +4,7 @@ import { getStore } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function RunsPage() {
-  const runs = await getStore().listRuns();
+  const runs = await (await getStore()).listRuns();
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Agent runs — observability ({runs.length})</h1>

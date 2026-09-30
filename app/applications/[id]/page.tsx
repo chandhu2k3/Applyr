@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default async function ApplicationDetail({ params }: { params: { id: string } }) {
-  const app = await getStore().getApplication(params.id);
+  const app = await (await getStore()).getApplication(params.id);
   if (!app) notFound();
   return (
     <div className="max-w-3xl space-y-4">

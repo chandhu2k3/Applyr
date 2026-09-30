@@ -4,7 +4,7 @@ import { getStore } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function ApplicationsPage() {
-  const apps = await getStore().listApplications();
+  const apps = await (await getStore()).listApplications();
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Applications — tracker ({apps.length})</h1>

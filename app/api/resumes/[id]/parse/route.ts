@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // POST /api/resumes/:id/parse — (re)parse stored PDF into the profile.
 // Fills only empty fields; existing user data always wins.
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
-  const store = getStore();
+  const store = await getStore();
   const rec = (await store.listResumes()).find((r) => r.id === params.id);
   if (!rec) return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {

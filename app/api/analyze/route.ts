@@ -11,7 +11,7 @@ import { now } from "@/lib/db/types";
 // Runs: kill-switch → page → job → policy/match → resume. No browser writes, no submission.
 // Every call is recorded as an agent run.
 export async function POST(req: Request) {
-  const store = getStore();
+  const store = await getStore();
   const run = await store.createRun({ status: "running", stage: "analyzePage", jobTitle: "", applicationId: null, aiCalls: 0 }).catch(() => null);
   const log = (level: string, msg: string) => {
     if (run) store.addRunEvent(run.id, { t: now(), level, msg }).catch(() => {});

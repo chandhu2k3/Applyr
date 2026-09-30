@@ -4,7 +4,7 @@ import { getStore } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ profile: await getStore().getProfile() });
+  return NextResponse.json({ profile: await (await getStore()).getProfile() });
 }
 
 export async function PUT(req: Request) {
@@ -14,5 +14,5 @@ export async function PUT(req: Request) {
     if (typeof v === "string") clean[k] = v.slice(0, 2000);
     else if (typeof v === "number") clean[k] = String(v);
   }
-  return NextResponse.json({ profile: await getStore().setProfile(clean) });
+  return NextResponse.json({ profile: await (await getStore()).setProfile(clean) });
 }
