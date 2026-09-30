@@ -1,8 +1,11 @@
 node_modules/
 .next/
 data/files/
+data/evidence/
 .env
 .env.local
 *.pdf
 tsconfig.tsbuildinfo
 .next/
+dev.log
+dev.err.log

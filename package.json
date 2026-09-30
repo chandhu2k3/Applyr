@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:browser": "playwright test",
+    "apply:local": "tsx workers/local-apply.ts",
     "db:types": "echo \"run: supabase gen types typescript --project-id <id> > supabase/types.ts\""
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
+    "tsx": "^4.19.1",
     "typescript": "^5.6.2",
     "vitest": "^2.1.2"
   }
