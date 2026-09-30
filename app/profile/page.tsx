@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const FIELDS: Array<[string, string]> = [
+const FIELDS: Array<[string, string, string?]> = [
   ["firstName", "First name"], ["lastName", "Last name"], ["email", "Email"], ["phone", "Phone"],
   ["city", "City"], ["linkedin", "LinkedIn"], ["github", "GitHub"], ["portfolio", "Portfolio"],
   ["workAuthorization", "Work authorization"], ["sponsorship", "Sponsorship"],
+  ["skills", "Skills (comma separated)", "React, Node, Python, Product, SQL"],
+  ["experienceYears", "Experience (years)", "1"],
 ];
 
 export default function ProfilePage() {
@@ -27,9 +29,9 @@ export default function ProfilePage() {
       <h1 className="text-xl font-bold">Candidate Profile — single source of truth</h1>
       <p className="text-sm text-neutral-500">Trusted facts only. The agent may NEVER invent beyond this + resume + answer bank.</p>
       <form className="grid grid-cols-2 gap-3" onSubmit={save}>
-        {FIELDS.map(([n, l]) => (
+        {FIELDS.map(([n, l, ph]) => (
           <label key={n} className="text-sm">{l}
-            <input value={form[n] ?? ""} onChange={(e) => setForm({ ...form, [n]: e.target.value })} className="input-applyx mt-1 w-full" />
+            <input value={form[n] ?? ""} placeholder={ph ?? ""} onChange={(e) => setForm({ ...form, [n]: e.target.value })} className="input-applyx mt-1 w-full" />
           </label>
         ))}
         <button className="btn-primary col-span-2">Save profile</button>

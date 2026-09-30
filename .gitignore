@@ -2,6 +2,7 @@ node_modules/
 .next/
 data/files/
 data/evidence/
+data/db.json
 .env
 .env.local
 *.pdf

@@ -9,6 +9,7 @@ import { matchCandidate } from "../agents/candidate-matcher";
 import { runApplication } from "../agents/application-agent";
 import { PolicySchema } from "../lib/policy/engine";
 import { selectResumeDeterministic } from "../lib/resume/selector";
+import { extractCompany } from "../agents/job-analyzer";
 import { getStore } from "../lib/db";
 import { now } from "../lib/db/types";
 
@@ -27,7 +28,7 @@ async function main(): Promise<void> {
   }
   const profile = await store.getProfile();
   const bank = (await store.listAnswers()).map((a) => ({ pattern: a.pattern, answer: a.answer, category: a.category as "FACTUAL", approved: a.approved }));
-  const storedResumes = (await store.listResumes()).filter((r) => r.active).map((r) => ({ id: r.id, roleFamily: r.roleFamily, active: r.active, isDefault: r.isDefault, keywords: r.keywords }));
+  const storedResumes = (await store.listResumes()).filter((r) => r.active).map((r) => ({ id: r.id, name: r.name, roleFamily: r.roleFamily, active: r.active, isDefault: r.isDefault, keywords: r.keywords }));
   const policy = PolicySchema.parse(await store.getPolicy());
 
   const run = await store.createRun({ status: "running", stage: "launch", jobTitle: url, applicationId: null, aiCalls: 0 });
@@ -47,12 +48,16 @@ async function main(): Promise<void> {
       return;
     }
     const text = await ex.pageText();
-    const job = analyzeJob({ title: await ex.pageTitle(), description: text, url, platform: page.platform });
-    const match = matchCandidate({ job, candidateSkills: [], candidateExperienceYears: 1 }, policy, storedResumes.length > 0);
+    const pageTitle = await ex.pageTitle();
+    const job = analyzeJob({ title: pageTitle, description: text, url, platform: page.platform });
+    job.company = extractCompany(url, pageTitle, text);
+    const skills = (profile.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const expYears = Number(profile.experienceYears ?? 1) || 0;
+    const match = matchCandidate({ job, candidateSkills: skills, candidateExperienceYears: expYears }, policy, storedResumes.length > 0);
     await log("MATCH", `${job.title} [${job.roleFamily}] → ${match.decision}`);
     if (match.decision !== "APPLY") {
       await store.finishRun(run.id, "blocked", "policy");
-      console.log(JSON.stringify({ status: "BLOCKED", decision: match.decision, reasons: match.reasons }));
+      console.log(JSON.stringify({ status: "BLOCKED", decision: match.decision, job: { title: job.title, company: job.company, family: job.roleFamily, confidence: job.confidence }, reasons: match.reasons, hint: skills.length === 0 ? "Add comma-separated skills at /profile to enable matching" : undefined }));
       return;
     }
     const resume = selectResumeDeterministic({ title: job.title, description: job.description }, storedResumes);
@@ -62,6 +67,15 @@ async function main(): Promise<void> {
       return;
     }
     await log("RESUME", `Selected ${resume.resumeId}`);
+    if (process.argv.includes("--dry-run")) {
+      await store.finishRun(run.id, "done", "dry-run");
+      console.log(JSON.stringify({
+        status: "DRY_RUN", decision: "APPLY", job: { title: job.title, company: job.company, family: job.roleFamily, confidence: job.confidence },
+        match: { confidence: match.confidence, reasons: match.reasons }, resume,
+        wouldFill: snapshot.filter((f) => f.required).map((f) => f.label || f.name),
+      }, null, 2));
+      return;
+    }
     const result = await runApplication(
       {
         url, company: job.company || new URL(url).hostname, title: job.title,
@@ -73,7 +87,7 @@ async function main(): Promise<void> {
     );
     const app = await store.createApplication({
       company: job.company || new URL(url).hostname, title: job.title, location: job.location,
-      url, platform: page.platform, resumeId: resume.resumeId, resumeName: resume.resumeId,
+      url, platform: page.platform, resumeId: resume.resumeId, resumeName: storedResumes.find((r) => r.id === resume.resumeId)?.name ?? resume.resumeId,
       status: result.status === "SUBMITTED" ? "SUBMITTED" : result.status,
       verification: result.status === "SUBMITTED" ? (result.evidence?.join("; ") ?? "") : ("reason" in result ? result.reason : ""),
       applicationId: result.status === "SUBMITTED" ? result.applicationId : null,

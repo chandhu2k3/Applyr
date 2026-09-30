@@ -12,6 +12,7 @@ export async function PUT(req: Request) {
   const clean: Record<string, string> = {};
   for (const [k, v] of Object.entries(body.profile ?? body)) {
     if (typeof v === "string") clean[k] = v.slice(0, 2000);
+    else if (typeof v === "number") clean[k] = String(v);
   }
   return NextResponse.json({ profile: await getStore().setProfile(clean) });
 }

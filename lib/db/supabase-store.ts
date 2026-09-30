@@ -22,6 +22,7 @@ export class SupabaseStore implements Store {
       phone: data.phone ?? "", city: data.city ?? "", linkedin: data.linkedin ?? "",
       github: data.github ?? "", portfolio: data.portfolio ?? "",
       workAuthorization: data.work_authorization ?? "", sponsorship: data.sponsorship ?? "",
+      skills: (data as { skills?: string }).skills ?? "", experienceYears: (data as { experience_years?: string }).experience_years ?? "0",
     };
   }
 
@@ -31,6 +32,7 @@ export class SupabaseStore implements Store {
       email: p.email ?? "", phone: p.phone ?? "", city: p.city ?? "",
       linkedin: p.linkedin ?? "", github: p.github ?? "", portfolio: p.portfolio ?? "",
       work_authorization: p.workAuthorization ?? "", sponsorship: p.sponsorship ?? "",
+      skills: p.skills ?? "", experience_years: p.experienceYears ?? "0",
       updated_at: now(),
     }, { onConflict: "user_id" });
     return p;

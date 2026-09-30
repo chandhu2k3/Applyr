@@ -40,6 +40,34 @@ export function classifyEmploymentType(title: string, description: string): stri
   return "Full-time";
 }
 
+// Company from structured URL patterns first, page title hints second, hostname last.
+export function extractCompany(url: string, pageTitle: string, bodyText: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    // boards.greenhouse.io/:company/jobs/:id  ·  job-boards.greenhouse.io/:company/...
+    const gh = u.pathname.match(/^\/(?!jobs|search|embed)([^/]+)\//);
+    if (host.includes("greenhouse.io") && gh) return prettify(gh[1]);
+    // jobs.lever.co/:company/...  (also custom domains running Lever)
+    const lv = u.pathname.match(/^\/([^/]+)\//);
+    if (host.includes("lever.co") && lv) return prettify(lv[1]);
+    // "Company — Job Title" / "Job Title @ Company" title conventions
+    const at = pageTitle.match(/[@|—–-]\s*([A-Z][\w&'. ]{1,40})\s*$/);
+    if (at) return at[1].trim();
+    // Greenhouse/Lever embed the company in headers like "Yext" early in text
+    const head = bodyText.slice(0, 600).match(/^([A-Z][\w&'.-]{1,30})\s*\n/);
+    if (head && (host.includes("greenhouse") || host.includes("lever"))) return head[1].trim();
+    return u.hostname.replace(/^www\.|^jobs\.|^careers\.|^boards\./, "").split(".")[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function prettify(slug: string): string {
+  const s = slug.replace(/[-_]+/g, " ").trim();
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function analyzeJob(input: { title: string; description: string; url: string; platform?: string; company?: string; location?: string }): JobAnalysis {
   const { family, score, ambiguous } = classifyRoleFamily(input.title, input.description);
   const confidence = ambiguous ? 0.45 : Math.min(0.95, 0.6 + score * 0.05);
