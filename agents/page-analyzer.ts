@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { mapFieldDeterministic } from "@/lib/resume/selector";
+import { sanitizeLabel } from "@/lib/labels";
 
 // §16/§24 — PageAnalyzerAgent. Deterministic first; AI only for ambiguous labels.
 
@@ -63,8 +64,9 @@ export function analyzePage(raw: unknown): PageAnalysis {
   }
 
   const fields = payload.fields.map((f) => {
-    const semanticType = mapFieldDeterministic(`${f.label} ${f.name}`);
-    return { ...f, semanticType, needsAI: semanticType === null };
+    const label = sanitizeLabel(f.label) || f.label; // strip ATS required-markers (*/⚡/(required))
+    const semanticType = mapFieldDeterministic(`${label} ${f.name}`);
+    return { ...f, label, semanticType, needsAI: semanticType === null };
   });
   const unmappedRequired = fields.filter((f) => f.required && f.semanticType === null).map((f) => f.label || f.name || f.type);
 

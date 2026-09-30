@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { runApplication } from "@/agents/application-agent";
 import { analyzePage } from "@/agents/page-analyzer";
+import { BrowserExecutor } from "@/browser/executor";
 import type { FormDriver } from "@/browser/executor";
 
 // Thin driver that forwards agent calls to the Playwright test page.
@@ -20,6 +21,16 @@ function pageDriver(pageText: () => Promise<string>, impl: Partial<FormDriver> &
 
 const PROFILE = { firstName: "Test", lastName: "Candidate", email: "agent-e2e@example.com", phone: "9999999999", university: "IIT Delhi" };
 const BANK = [{ pattern: "authorized to work", answer: "Yes", category: "WORK_AUTHORIZATION" as const, approved: true }];
+
+test("executor fills marker-decorated labels (Greenhouse-style First Name⚡)", async ({ page }) => {
+  await page.setContent(`<form><label>First Name⚡<input name="fn" /></label><label>Email (required)<input name="em" /></label><button type="submit">Submit</button></form>`);
+  const ex = new BrowserExecutor();
+  ex.attach(page);
+  await ex.fillText("First Name⚡", "Ada");
+  await ex.fillText("Email (required)", "a@b.c");
+  expect(await page.locator('input[name="fn"]').inputValue()).toBe("Ada");
+  expect(await page.locator('input[name="em"]').inputValue()).toBe("a@b.c");
+});
 
 test("mock simple: agent BLOCKS on unknown required CTC (never guesses)", async ({ page }) => {
   await page.goto("/mock-ats/simple");

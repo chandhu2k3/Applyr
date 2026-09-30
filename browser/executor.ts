@@ -1,6 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { sanitizeLabel } from "@/lib/labels";
 
 // Local-first browser driver. Runs on the user's machine; nothing cloud.
 // Prefers accessible labels → placeholder/name → ids. Coordinates never.
@@ -33,6 +34,12 @@ export class BrowserExecutor implements FormDriver {
     return this._page;
   }
 
+  /** Testing seam: drive an externally-owned page (e.g. the Playwright test runner's). */
+  attach(page: Page): void {
+    this._page = page;
+    this.actions.push("attach");
+  }
+
   async launch(headless = true): Promise<void> {
     this.browser = await chromium.launch({ headless });
     this.context = await this.browser.newContext();
@@ -50,7 +57,7 @@ export class BrowserExecutor implements FormDriver {
   }
 
   async snapshotFields(): Promise<SnapshotField[]> {
-    return this.req().evaluate(() => {
+    const raw = await this.req().evaluate(() => {
       const out: SnapshotField[] = [];
       document.querySelectorAll("input,textarea,select").forEach((el) => {
         const h = el as HTMLInputElement;
@@ -62,11 +69,13 @@ export class BrowserExecutor implements FormDriver {
       });
       return out.slice(0, 200);
     });
+    return raw.map((f) => ({ ...f, label: sanitizeLabel(f.label) || f.label }));
   }
 
   private async resolve(label: string, name?: string): Promise<Locator> {
     const page = this.req();
-    const re = new RegExp(esc(label), "i");
+    const clean = sanitizeLabel(label) || label;
+    const re = new RegExp(esc(clean), "i");
     const byLabel = page.getByLabel(re, { exact: false });
     if ((await byLabel.count()) > 0) return byLabel.first();
     if (name) {

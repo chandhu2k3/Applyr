@@ -120,15 +120,29 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
       };
     }
 
-    const result = await runApplication(
-      {
-        url, company: job.company, title: job.title,
-        pageFields: snapshot.map((f) => ({ ...f })),
-        profile, bank, resumePath: opts.resumePath ?? process.env.APPLY_RESUME ?? "tests/fixtures/resume.pdf",
-        policyDecision: "APPLY", duplicate: false,
-      },
-      ex
-    );
+    let result: Awaited<ReturnType<typeof runApplication>>;
+    try {
+      result = await runApplication(
+        {
+          url, company: job.company, title: job.title,
+          pageFields: snapshot.map((f) => ({ ...f })),
+          profile, bank, resumePath: opts.resumePath ?? process.env.APPLY_RESUME ?? "tests/fixtures/resume.pdf",
+          policyDecision: "APPLY", duplicate: false,
+        },
+        ex
+      );
+    } catch (e) {
+      // A fill/upload/click crash must still leave a tracked record, never a bare run.
+      const reason = `Agent error: ${e instanceof Error ? e.message : String(e).slice(0, 300)}`;
+      await log("FAILED", reason);
+      await store.finishRun(runId, "failed", "apply").catch(() => {});
+      const app = await store.createApplication({
+        company: job.company, title: job.title, location: job.location, url, platform: page.platform,
+        resumeId: resume.resumeId, resumeName: storedResumes.find((r) => r.id === resume.resumeId)?.name ?? resume.resumeId,
+        status: "FAILED", verification: reason, applicationId: null, answers: {}, missingQuestions: [],
+      });
+      return { status: "FAILED", runId, applicationId: app.id, detail: { reason } };
+    }
     const status = result.status === "SUBMITTED" ? "SUBMITTED" : result.status;
     const evidence = "evidence" in result ? result.evidence?.join("; ") ?? "" : "";
     const extAppId = "applicationId" in result ? result.applicationId : null;
