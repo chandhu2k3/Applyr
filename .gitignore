@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-dev/
 data/files/
 data/evidence/
 data/db.json

@@ -4,8 +4,10 @@
   "private": true,
   "description": "V1 free-first single-user Apply with Agent — Next.js + Supabase + local Playwright",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node -e \"require('fs').rmSync('.next-dev',{recursive:true,force:true})\" && set NEXT_DIST_DIR=.next-dev&& next dev",
+    "dev:keep": "set NEXT_DIST_DIR=.next-dev&& next dev",
     "build": "next build",
+    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true});require('fs').rmSync('.next-dev',{recursive:true,force:true})\"",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
