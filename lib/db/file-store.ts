@@ -85,11 +85,15 @@ export class FileStore implements Store {
     await this.save(); return db.resumes.length < n;
   }
 
-  async listApplications() { return (await this.load()).applications; }
-  async getApplication(id: string) { return (await this.load()).applications.find((x) => x.id === id) ?? null; }
+  async listApplications() {
+    const apps = (await this.load()).applications;
+    for (const a of apps) if (!a.missingQuestions) a.missingQuestions = [];
+    return apps;
+  }
+  async getApplication(id: string) { return (await this.listApplications()).find((x) => x.id === id) ?? null; }
   async createApplication(a: Omit<ApplicationRecord, "id" | "events" | "createdAt" | "updatedAt">) {
     const db = await this.load();
-    const rec = { ...a, id: uid(), events: [], createdAt: now(), updatedAt: now() };
+    const rec = { ...a, missingQuestions: a.missingQuestions ?? [], id: uid(), events: [], createdAt: now(), updatedAt: now() };
     db.applications.unshift(rec); await this.save(); return rec;
   }
   async addAppEvent(id: string, e: AppEvent) {
@@ -143,4 +147,9 @@ export class FileStore implements Store {
   async setPolicy(p: Record<string, unknown>) { const db = await this.load(); db.policy = p; await this.save(); return p; }
   async getSettings() { return (await this.load()).settings; }
   async setSettings(s: Partial<SettingsRecord>) { const db = await this.load(); Object.assign(db.settings, s); await this.save(); return db.settings; }
+  async clearHistory() {
+    const db = await this.load();
+    db.applications = []; db.runs = [];
+    await this.save();
+  }
 }

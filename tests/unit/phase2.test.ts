@@ -60,6 +60,10 @@ describe("matcher + answers + rate limit", () => {
     expect(matchAnswer("Expected salary?", bank).kind).toBe("BLOCKED");
     expect(answerFromProfile("email", { email: "a@b.c" }).kind).toBe("ANSWERED");
   });
+  it("approved-but-empty answers never fill", () => {
+    const bank = [{ pattern: "sponsorship", answer: "", category: "SPONSORSHIP" as const, approved: true }];
+    expect(matchAnswer("Do you require sponsorship?", bank).kind).toBe("BLOCKED");
+  });
   it("rate limits daily + company", () => {
     const cfg = { maxPerDay: 1, maxPerHour: 5, maxPerCompanyPerDay: 1, minDelaySecs: 0 };
     expect(checkRateLimit([{ at: 1000, company: "X" }], 2000, "Y", cfg).allowed).toBe(false);

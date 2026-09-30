@@ -31,7 +31,7 @@ describe("file store (real persistence)", () => {
   });
   it("applications + runs lifecycle", async () => {
     const s = fresh();
-    const app = await s.createApplication({ company: "X", title: "Y", location: "", url: "u", platform: "generic", resumeId: "r", resumeName: "SDE", status: "SUBMITTED", verification: "", applicationId: "ID-1", answers: { Email: "a@b.c" } });
+    const app = await s.createApplication({ company: "X", title: "Y", location: "", url: "u", platform: "generic", resumeId: "r", resumeName: "SDE", status: "SUBMITTED", verification: "", applicationId: "ID-1", answers: { Email: "a@b.c" }, missingQuestions: [] });
     await s.addAppEvent(app.id, { t: new Date().toISOString(), type: "SUBMITTED" });
     await s.setAppStatus(app.id, "VERIFIED", "email");
     expect((await s.getApplication(app.id))?.status).toBe("VERIFIED");
@@ -41,5 +41,15 @@ describe("file store (real persistence)", () => {
     const runs = await s.listRuns();
     expect(runs[0].status).toBe("done");
     expect(runs[0].events.length).toBe(1);
+  });
+  it("clearHistory wipes runs + applications, keeps profile", async () => {
+    const s = fresh();
+    await s.setProfile({ firstName: "A" });
+    await s.createApplication({ company: "X", title: "Y", location: "", url: "u", platform: "g", resumeId: "", resumeName: "", status: "BLOCKED", verification: "", applicationId: null, answers: {}, missingQuestions: ["Q?"] });
+    await s.createRun({ status: "blocked", stage: "policy", jobTitle: "Y", applicationId: null, aiCalls: 0 });
+    await s.clearHistory();
+    expect(await s.listApplications()).toEqual([]);
+    expect(await s.listRuns()).toEqual([]);
+    expect((await s.getProfile()).firstName).toBe("A");
   });
 });

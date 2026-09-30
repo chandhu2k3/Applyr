@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/card";
+import { ApplyForm, ClearHistory } from "@/components/runs/apply-form";
 import { getStore } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -7,8 +8,12 @@ export default async function RunsPage() {
   const runs = await (await getStore()).listRuns();
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Agent runs — observability ({runs.length})</h1>
-      {runs.length === 0 && <p className="text-sm text-neutral-500">No runs yet. Use the extension, <code className="font-mono text-[12px]">POST /api/analyze</code>, or <code className="font-mono text-[12px]">npm run apply:local</code>.</p>}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">Agent runs — observability ({runs.length})</h1>
+        <ClearHistory />
+      </div>
+      <ApplyForm />
+      {runs.length === 0 && <p className="text-sm text-neutral-500">No runs yet. Paste a job URL above, use the extension, or run <code className="font-mono text-[12px]">npm run apply:local</code>.</p>}
       {runs.map((r) => (
         <div key={r.id} className="panel">
           <div className="panel-header flex items-center justify-between">

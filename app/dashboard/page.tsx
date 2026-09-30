@@ -88,7 +88,7 @@ export default async function DashboardPage() {
                   <td className="px-4 py-2.5"><a href={`/applications/${r.id}`} className="font-semibold underline-offset-2 hover:underline">{r.company}</a><br /><span className="text-neutral-500">{r.title}</span></td>
                   <td className="px-4 py-2.5 font-mono text-[12px]">{r.platform}</td>
                   <td className="px-4 py-2.5 text-neutral-600">{r.resumeName || "—"}</td>
-                  <td className="px-4 py-2.5"><Badge tone={r.status === "SUBMITTED" || r.status === "VERIFIED" ? "verified" : r.status === "BLOCKED" ? "blocked" : r.status === "FAILED" ? "failed" : "submitted"}>{r.status}</Badge></td>
+                  <td className="px-4 py-2.5"><Badge tone={r.status === "SUBMITTED" || r.status === "VERIFIED" ? "verified" : r.status === "BLOCKED" ? "blocked" : r.status === "FAILED" ? "failed" : r.status === "SUPERSEDED" ? "draft" : "submitted"}>{r.status}</Badge></td>
                   <td className="metric-num px-4 py-2.5 text-neutral-600">{new Date(r.createdAt).toLocaleString()}</td>
                   <td className="px-4 py-2.5 font-mono text-[11px] text-neutral-500">{r.applicationId ? `Ref: ${r.applicationId}` : r.verification || "—"}</td>
                 </tr>

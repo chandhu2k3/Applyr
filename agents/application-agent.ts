@@ -21,7 +21,7 @@ export type AppAgentInput = {
 
 export type AppAgentResult =
   | { status: "SUBMITTED" | "SUBMISSION_UNCERTAIN"; answers: Record<string, string>; evidence: string[]; applicationId: string | null; actions: string[] }
-  | { status: "BLOCKED" | "FAILED"; reason: string; answers: Record<string, string>; actions: string[] };
+  | { status: "BLOCKED" | "FAILED"; reason: string; answers: Record<string, string>; actions: string[]; missingQuestions: string[] };
 
 export async function runApplication(input: AppAgentInput, driver: FormDriver): Promise<AppAgentResult> {
   const actions: string[] = [];
@@ -29,7 +29,7 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
 
   // Re-scan live page text for security halts (CAPTCHA may render after load).
   const halt = detectSecurityHalt(await driver.pageText());
-  if (halt) return { status: "BLOCKED", reason: `${halt} — manual action required, agent paused`, answers, actions };
+  if (halt) return { status: "BLOCKED", reason: `${halt} — manual action required, agent paused`, answers, actions, missingQuestions: [] };
 
   // Analyze fields deterministically (semantic mapping already done by page analyzer upstream).
   const page = analyzePage({ url: input.url, title: input.title, bodyText: "", fields: input.pageFields });
@@ -74,7 +74,7 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
     resumeUploaded = true;
     actions.push("resume-uploaded");
   } catch (e) {
-    return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions };
+    return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: unknownRequired };
   }
 
   const gate = runValidationGate({
@@ -82,13 +82,13 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
     requiredFields: required, unknownRequired, fabricated: false,
     policyDecision: input.policyDecision, duplicate: input.duplicate, visibleErrors: [],
   });
-  if (!gate.ok) return { status: "BLOCKED", reason: `Validation gate: ${gate.failures.join("; ")}`, answers, actions };
+  if (!gate.ok) return { status: "BLOCKED", reason: `Validation gate: ${gate.failures.join("; ")}`, answers, actions, missingQuestions: unknownRequired };
 
   const urlBefore = driver.url();
   try {
     await driver.clickSubmit();
   } catch (e) {
-    return { status: "FAILED", reason: `Submit failed: ${e instanceof Error ? e.message : e}`, answers, actions };
+    return { status: "FAILED", reason: `Submit failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: [] };
   }
   const after = await driver.pageText();
   const adapter = pickAdapter(input.url);

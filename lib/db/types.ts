@@ -13,6 +13,7 @@ export type ApplicationRecord = {
   resumeId: string; resumeName: string;
   status: string; verification: string; applicationId: string | null;
   answers: Record<string, string>;
+  missingQuestions: string[];
   events: AppEvent[];
   createdAt: string; updatedAt: string;
 };
@@ -56,6 +57,7 @@ export interface Store {
   setPolicy(p: Record<string, unknown>): Promise<Record<string, unknown>>;
   getSettings(): Promise<SettingsRecord>;
   setSettings(s: Partial<SettingsRecord>): Promise<SettingsRecord>;
+  clearHistory(): Promise<void>;
 }
 
 export function uid(): string {

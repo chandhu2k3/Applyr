@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function MockSimple() {
   const [done, setDone] = useState<string | null>(null);
   const [dup, setDup] = useState(false);
+  // document.title is read by the agent as the job title.
+  useEffect(() => { document.title = "Software Engineer Intern — MockCorp"; }, []);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

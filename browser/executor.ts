@@ -105,13 +105,23 @@ export class BrowserExecutor implements FormDriver {
 
   async clickSubmit(): Promise<void> {
     const page = this.req();
+    const before = await this.pageText().catch(() => "");
+    const urlBefore = page.url();
     const btn = page.getByRole("button", { name: /submit|apply|send|continue|next/i });
     if ((await btn.count()) > 0) {
-      await Promise.all([page.waitForLoadState("domcontentloaded", { timeout: 15_000 }).catch(() => {}), btn.first().click()]);
+      await btn.first().click();
     } else {
       await page.locator('button[type="submit"],input[type="submit"]').first().click().catch(() => {
         throw new Error("No submit control found — BLOCKED");
       });
+    }
+    // Settle: wait for navigation or visible result (SPA re-render / server roundtrip).
+    const deadline = Date.now() + 12_000;
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(400);
+      const urlChanged = page.url() !== urlBefore;
+      const text = await this.pageText().catch(() => before);
+      if (urlChanged || text !== before) break;
     }
     this.actions.push("submit-click");
   }

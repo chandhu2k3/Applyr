@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function MockMultistep() {
   const [step, setStep] = useState(1);
   const [done, setDone] = useState<string | null>(null);
+  useEffect(() => { document.title = "Product Intern — MockCorp"; }, []);
 
   if (done) {
     return (

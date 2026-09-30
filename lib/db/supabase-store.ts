@@ -87,7 +87,8 @@ export class SupabaseStore implements Store {
         url: job?.url ?? "", platform: job?.platform ?? "generic",
         resumeId: a.resume_id ?? "", resumeName: (resume?.data as { name?: string } | null)?.name ?? "",
         status: a.status, verification: a.verification ?? "", applicationId: null,
-        answers: {}, events: (evts ?? []).map((e) => ({ t: e.created_at, type: e.event_type, meta: e.metadata })),
+        answers: {}, missingQuestions: [],
+        events: (evts ?? []).map((e) => ({ t: e.created_at, type: e.event_type, meta: e.metadata })),
         createdAt: a.created_at, updatedAt: a.updated_at,
       });
     }
@@ -188,5 +189,18 @@ export class SupabaseStore implements Store {
     const next = { ...cur, ...s };
     await this.db.from("settings").upsert({ user_id: USER, kill_switch: next.killSwitch, evidence_retention_days: next.retentionDays, updated_at: now() }, { onConflict: "user_id" });
     return next;
+  }
+
+  async clearHistory(): Promise<void> {
+    const apps = await this.db.from("applications").select("id").eq("user_id", USER);
+    for (const a of (apps.data ?? [])) {
+      await this.db.from("application_events").delete().eq("application_id", (a as { id: string }).id);
+    }
+    await this.db.from("applications").delete().eq("user_id", USER);
+    const runs = await this.db.from("agent_runs").select("id").eq("user_id", USER);
+    for (const r of (runs.data ?? [])) {
+      await this.db.from("agent_events").delete().eq("agent_run_id", (r as { id: string }).id);
+    }
+    await this.db.from("agent_runs").delete().eq("user_id", USER);
   }
 }

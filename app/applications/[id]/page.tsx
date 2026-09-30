@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/card";
+import { ResolveBlock } from "@/components/applications/resolve-block";
 import { getStore } from "@/lib/db";
 import { notFound } from "next/navigation";
 
@@ -18,6 +19,7 @@ export default async function ApplicationDetail({ params }: { params: { id: stri
         {app.applicationId && <Badge tone="submitted">Ref: {app.applicationId}</Badge>}
         {app.resumeName && <Badge tone="ready">Resume: {app.resumeName}</Badge>}
       </div>
+      {app.status === "BLOCKED" && <ResolveBlock applicationId={app.id} jobUrl={app.url} questions={app.missingQuestions ?? []} />}
       <div className="panel">
         <div className="panel-header">Answers submitted ({Object.keys(app.answers).length})</div>
         <div className="p-4 font-mono text-[12px]">

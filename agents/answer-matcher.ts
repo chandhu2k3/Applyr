@@ -35,7 +35,7 @@ function patternMatches(pattern: string, question: string): boolean {
 
 export function matchAnswer(question: string, bank: AnswerEntry[]): AnswerVerdict {
   for (const entry of bank) {
-    if (!entry.approved) continue;
+    if (!entry.approved || !entry.answer.trim()) continue; // unapproved OR unanswered seed → never fill
     if (patternMatches(entry.pattern, question)) return { kind: "ANSWERED", answer: entry.answer, entry };
   }
   return { kind: "BLOCKED", reason: `No approved answer for: "${question}" — BLOCKED, never guess.` };

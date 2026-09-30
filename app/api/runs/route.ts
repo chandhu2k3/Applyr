@@ -7,6 +7,11 @@ export async function GET() {
   return NextResponse.json({ runs: await (await getStore()).listRuns() });
 }
 
+export async function DELETE() {
+  await (await getStore()).clearHistory();
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(req: Request) {
   const b = await req.json();
   const store = await getStore();

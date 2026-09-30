@@ -7,6 +7,11 @@ export async function GET() {
   return NextResponse.json({ applications: await (await getStore()).listApplications() });
 }
 
+export async function DELETE() {
+  await (await getStore()).clearHistory();
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(req: Request) {
   const b = await req.json();
   if (!b.company || !b.title || !b.url) {
@@ -20,6 +25,7 @@ export async function POST(req: Request) {
     status: String(b.status ?? "SUBMITTED"), verification: String(b.verification ?? ""),
     applicationId: b.applicationId ? String(b.applicationId) : null,
     answers: typeof b.answers === "object" && b.answers ? b.answers : {},
+    missingQuestions: Array.isArray(b.missingQuestions) ? b.missingQuestions.map(String).slice(0, 20) : [],
   });
   return NextResponse.json({ application: rec }, { status: 201 });
 }
