@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/db";
 import { getStorage } from "@/lib/storage";
 import { buildStorageKey } from "@/lib/storage/types";
+import { extractPdfText, mergeIntoProfile, parseResumeProfile } from "@/lib/resume/parse";
 
 export const dynamic = "force-dynamic";
 
@@ -34,5 +35,20 @@ export async function POST(req: Request) {
     active: true, isDefault: !existing.some((r) => r.roleFamily === roleFamily && r.isDefault),
     keywords: [],
   });
-  return NextResponse.json({ resume: rec }, { status: 201 });
+
+  // Parse the resume → auto-fill empty profile fields, report what's still missing.
+  // Best-effort: upload succeeds even if parsing fails.
+  let parse: { filled: string[]; missing: string[]; skillsFound: number } | null = null;
+  try {
+    const text = await extractPdfText(buf);
+    const parsed = parseResumeProfile(text);
+    const current = await store.getProfile();
+    const { merged, filled } = mergeIntoProfile(current, parsed.profile);
+    if (filled.length > 0) await store.setProfile(merged);
+    parse = { filled, missing: parsed.missing, skillsFound: parsed.profile.skills.length };
+  } catch (e) {
+    console.error("[resume-parse]", e instanceof Error ? `${e.name}: ${e.message}` : e);
+    parse = { filled: [], missing: ["parse-failed"], skillsFound: 0 };
+  }
+  return NextResponse.json({ resume: rec, parse }, { status: 201 });
 }

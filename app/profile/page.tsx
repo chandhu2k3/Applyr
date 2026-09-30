@@ -12,6 +12,7 @@ const FIELDS: Array<[string, string, string?]> = [
 export default function ProfilePage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
+  const missing = ["firstName", "lastName", "email", "phone", "city", "skills", "experienceYears"].filter((k) => !form[k]);
 
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((d) => setForm(d.profile ?? {})).catch(() => {});
@@ -27,7 +28,10 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl space-y-4">
       <h1 className="text-xl font-bold">Candidate Profile — single source of truth</h1>
-      <p className="text-sm text-neutral-500">Trusted facts only. The agent may NEVER invent beyond this + resume + answer bank.</p>
+      <p className="text-sm text-neutral-500">Trusted facts only. Upload a resume at <a href="/resumes" className="underline">Resumes</a> to auto-fill this — you only fill what parsing couldn&apos;t find.</p>
+      {missing.length > 0
+        ? <p className="rounded-applyx border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">Still needed for matching: <b>{missing.join(", ")}</b></p>
+        : <p className="rounded-applyx border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Profile complete — the agent can match with full confidence.</p>}
       <form className="grid grid-cols-2 gap-3" onSubmit={save}>
         {FIELDS.map(([n, l, ph]) => (
           <label key={n} className="text-sm">{l}

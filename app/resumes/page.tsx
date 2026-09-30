@@ -16,16 +16,27 @@ export default function ResumesPage() {
 
   async function upload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setMsg("Uploading…");
+    setMsg("Uploading + parsing…");
     const res = await fetch("/api/resumes", { method: "POST", body: new FormData(e.target as HTMLFormElement) });
     const d = await res.json().catch(() => ({}));
-    setMsg(res.ok ? `Uploaded ${d.resume.name} v${d.resume.version}` : `Failed: ${d.error ?? "error"}`);
+    if (res.ok) {
+      const p = d.parse;
+      setMsg(`Uploaded ${d.resume.name} v${d.resume.version} · ${p?.skillsFound ?? 0} skills found${p?.filled?.length ? ` · profile filled: ${p.filled.join(", ")}` : ""}${p?.missing?.length ? ` · still missing: ${p.missing.join(", ")}` : ""}`);
+    } else setMsg(`Failed: ${d.error ?? "error"}`);
     (e.target as HTMLFormElement).reset();
     refresh();
   }
 
   async function patch(id: string, body: object) {
     await fetch(`/api/resumes/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    refresh();
+  }
+
+  async function reparse(id: string) {
+    setMsg("Parsing into profile…");
+    const res = await fetch(`/api/resumes/${id}/parse`, { method: "POST" });
+    const d = await res.json().catch(() => ({}));
+    setMsg(res.ok ? `Parsed · ${d.skillsFound} skills${d.filled?.length ? ` · filled: ${d.filled.join(", ")}` : " · profile already complete"}${d.missing?.length ? ` · missing: ${d.missing.join(", ")}` : ""}` : `Failed: ${d.error ?? "error"}`);
     refresh();
   }
 
@@ -38,7 +49,7 @@ export default function ResumesPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Resume Library — PM / SDE families</h1>
-      <p className="text-sm text-neutral-500">PDFs live in object storage (local disk now, R2 later); Postgres/file-store holds metadata only.</p>
+      <p className="text-sm text-neutral-500">Uploading a resume auto-parses email, phone, links, skills, education and experience into your profile — only empty fields are filled, and anything missing is flagged for you.</p>
       <form onSubmit={upload} className="panel flex flex-wrap items-end gap-3 p-4">
         <label className="text-sm">Name<input name="name" required className="input-applyx mt-1 block" placeholder="SDE Resume" /></label>
         <label className="text-sm">Family<select name="roleFamily" className="input-applyx mt-1 block"><option>PM</option><option>SDE</option></select></label>
@@ -61,6 +72,7 @@ export default function ResumesPage() {
               <td className="px-4 py-2"><Badge tone={r.active ? "verified" : "draft"}>{r.isDefault ? "Default" : r.active ? "Active" : "Inactive"}</Badge></td>
               <td className="px-4 py-2">
                 <span className="flex gap-2 text-[12px]">
+                  <button className="underline" onClick={() => reparse(r.id)}>Parse → profile</button>
                   <button className="underline" onClick={() => patch(r.id, { active: !r.active })}>{r.active ? "Deactivate" : "Activate"}</button>
                   {!r.isDefault && <button className="underline" onClick={() => patch(r.id, { isDefault: true })}>Set default</button>}
                   <button className="text-critical underline" onClick={() => remove(r.id)}>Delete</button>

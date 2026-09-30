@@ -2,7 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   // V1 free-first: no serverless browser workers. Playwright runs locally.
-  // Keep server actions / route handlers stateless and cheap for Vercel Hobby.
+  // pdfjs must run from node_modules (worker file resolution breaks when bundled).
+  experimental: { serverComponentsExternalPackages: ["pdfjs-dist"] },
 };
 
 export default nextConfig;
