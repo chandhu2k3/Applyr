@@ -87,7 +87,7 @@ export class SupabaseStore implements Store {
         url: job?.url ?? "", platform: job?.platform ?? "generic",
         resumeId: a.resume_id ?? "", resumeName: (resume?.data as { name?: string } | null)?.name ?? "",
         status: a.status, verification: a.verification ?? "", applicationId: null,
-        answers: {}, missingQuestions: [],
+        answers: {}, missingQuestions: [], missingProfile: [],
         events: (evts ?? []).map((e) => ({ t: e.created_at, type: e.event_type, meta: e.metadata })),
         createdAt: a.created_at, updatedAt: a.updated_at,
       });

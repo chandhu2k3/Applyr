@@ -14,6 +14,7 @@ export type ApplicationRecord = {
   status: string; verification: string; applicationId: string | null;
   answers: Record<string, string>;
   missingQuestions: string[];
+  missingProfile: string[];
   events: AppEvent[];
   createdAt: string; updatedAt: string;
 };

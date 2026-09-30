@@ -40,7 +40,7 @@ function showJobCard(out, page) {
   $("jResume").textContent = out.resume ? out.resume.resumeId : "—";
 }
 
-async function pollRun(runId, verdict) {
+async function pollRun(runId, verdict, tabUrl) {
   for (let i = 0; i < 60; i++) {
     await new Promise((r) => setTimeout(r, 3000));
     try {
@@ -49,9 +49,12 @@ async function pollRun(runId, verdict) {
       if (run && ["done", "blocked", "failed"].includes(run.status)) {
         const last = run.events?.[run.events.length - 1];
         setStep("s-sub", run.status === "done" ? "done" : "", "Submission");
-        verdict.innerHTML = run.status === "done"
-          ? `<span class="ok">✓ Application submitted — verified.\n${last?.msg ?? ""}\nSee Applications in the dashboard.</span>`
-          : `<span class="err">■ ${run.stage}: ${last?.msg ?? run.status}\nRecorded — resolve it in the dashboard.</span>`;
+        if (run.status === "done") {
+          verdict.innerHTML = `<span class="ok">✓ Application submitted — verified.\n${last?.msg ?? ""}\nSee Applications in the dashboard.</span>`;
+        } else {
+          verdict.innerHTML = `<span class="err">■ Paused (${run.stage}): ${(last?.msg ?? "").slice(0, 220)}\nRecorded — help below, then retry.</span>`;
+          showNeedsYou(tabUrl);
+        }
         $("cta").disabled = false;
         $("cta").textContent = "Analyze this page";
         mode = "analyze";
@@ -63,6 +66,53 @@ async function pollRun(runId, verdict) {
   $("cta").disabled = false;
   $("cta").textContent = "Analyze this page";
   mode = "analyze";
+}
+
+// Needs-you handoff: fetch the recorded BLOCKED application for this URL,
+// render its missing questions + profile gaps as inputs, save, retry.
+async function showNeedsYou(tabUrl) {
+  const card = $("needCard"), body = $("needBody");
+  card.style.display = "none";
+  body.innerHTML = "";
+  $("needMsg").textContent = "";
+  try {
+    const d = await dashboard("/applications");
+    const app = (d.applications ?? []).find((a) => a.url === tabUrl && a.status === "BLOCKED");
+    if (!app) return;
+    const qs = app.missingQuestions ?? [];
+    const pf = app.missingProfile ?? [];
+    if (!qs.length && !pf.length) return;
+    for (const f of pf) {
+      body.insertAdjacentHTML("beforeend", `<label><span class="tag">PROFILE · ${f}</span><input data-p="${f}" placeholder="Your ${f} (saved to profile)" /></label>`);
+    }
+    for (const q of qs) {
+      body.insertAdjacentHTML("beforeend", `<label><span class="tag">QUESTION</span><span>${q}</span><input data-q="${q.replace(/"/g, "&quot;")}" placeholder="Your answer (saved to bank)" /></label>`);
+    }
+    card.style.display = "block";
+    $("needSave").onclick = async () => {
+      $("needMsg").textContent = "Saving…";
+      const prof = {};
+      body.querySelectorAll("[data-p]").forEach((el) => { if (el.value.trim()) prof[el.dataset.p] = el.value.trim().slice(0, 2000); });
+      if (Object.keys(prof).length) {
+        await fetch(`${API}/profile`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ profile: prof }) });
+      }
+      for (const el of body.querySelectorAll("[data-q]")) {
+        if (!el.value.trim()) continue;
+        await fetch(`${API}/answers`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pattern: el.dataset.q.slice(0, 200), answer: el.value.trim().slice(0, 2000), category: "FACTUAL", approved: true }) });
+      }
+      $("needMsg").textContent = "Saved — hit Retry application.";
+    };
+    $("needRetry").onclick = async () => {
+      $("needMsg").textContent = "Retrying…";
+      const r = await fetch(`${API}/apply`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: tabUrl }) });
+      const out = await r.json();
+      if (r.status === 202 && out.runId) {
+        card.style.display = "none";
+        $("verdict").innerHTML = `<span class="muted">Retry running…</span>`;
+        pollRun(out.runId, $("verdict"), tabUrl);
+      } else $("needMsg").textContent = `Failed: ${out.error ?? "error"}`;
+    };
+  } catch { /* dashboard unreachable — verdict text already explains */ }
 }
 
 $("cta").onclick = async () => {
@@ -78,7 +128,7 @@ $("cta").onclick = async () => {
       const d = await r.json();
       if (r.status !== 202 || !d.runId) throw new Error(d.error || "apply failed to start");
       mode = "polling";
-      pollRun(d.runId, verdict);
+      pollRun(d.runId, verdict, lastTabUrl);
     } catch (e) {
       verdict.innerHTML = `<span class="err">■ Could not start: ${e.message}</span>`;
       cta.disabled = false;
@@ -92,6 +142,7 @@ $("cta").onclick = async () => {
   cta.disabled = true;
   cta.classList.remove("blocked");
   cta.textContent = "Analyzing…";
+  $("needCard").style.display = "none";
   $("steps").style.display = "grid";
   resetSteps();
   try {

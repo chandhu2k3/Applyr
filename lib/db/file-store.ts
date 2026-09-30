@@ -87,13 +87,16 @@ export class FileStore implements Store {
 
   async listApplications() {
     const apps = (await this.load()).applications;
-    for (const a of apps) if (!a.missingQuestions) a.missingQuestions = [];
+    for (const a of apps) {
+      if (!a.missingQuestions) a.missingQuestions = [];
+      if (!a.missingProfile) a.missingProfile = [];
+    }
     return apps;
   }
   async getApplication(id: string) { return (await this.listApplications()).find((x) => x.id === id) ?? null; }
   async createApplication(a: Omit<ApplicationRecord, "id" | "events" | "createdAt" | "updatedAt">) {
     const db = await this.load();
-    const rec = { ...a, missingQuestions: a.missingQuestions ?? [], id: uid(), events: [], createdAt: now(), updatedAt: now() };
+    const rec = { ...a, missingQuestions: a.missingQuestions ?? [], missingProfile: a.missingProfile ?? [], id: uid(), events: [], createdAt: now(), updatedAt: now() };
     db.applications.unshift(rec); await this.save(); return rec;
   }
   async addAppEvent(id: string, e: AppEvent) {

@@ -45,6 +45,28 @@ describe("application agent", () => {
       fakeDriver("", [])
     );
     expect(r.status).toBe("BLOCKED");
+    if (r.status === "BLOCKED") {
+      expect(r.missingQuestions).toContain("Expected CTC");
+      expect(r.missingProfile).toContain("salary"); // CTC maps to known type: profile gap + question
+    }
+  });
+  it("distinguishes profile gaps from unknown questions", async () => {
+    const r = await runApplication(
+      {
+        ...BASE,
+        profile: { firstName: "A" }, // email missing from profile
+        pageFields: [
+          { tag: "input", type: "email", label: "Email", name: "em", required: true },
+          { tag: "input", type: "text", label: "Spirit animal", name: "sa", required: true },
+        ],
+      },
+      fakeDriver("", [])
+    );
+    expect(r.status).toBe("BLOCKED");
+    if (r.status === "BLOCKED") {
+      expect(r.missingProfile).toContain("email");
+      expect(r.missingQuestions).toContain("Spirit animal");
+    }
   });
 });
 

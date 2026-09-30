@@ -19,9 +19,14 @@ export type AppAgentInput = {
   duplicate: boolean;
 };
 
+export type BlockedResult = {
+  status: "BLOCKED" | "FAILED"; reason: string; answers: Record<string, string>; actions: string[];
+  missingQuestions: string[]; missingProfile: string[];
+};
+
 export type AppAgentResult =
   | { status: "SUBMITTED" | "SUBMISSION_UNCERTAIN"; answers: Record<string, string>; evidence: string[]; applicationId: string | null; actions: string[] }
-  | { status: "BLOCKED" | "FAILED"; reason: string; answers: Record<string, string>; actions: string[]; missingQuestions: string[] };
+  | BlockedResult;
 
 export async function runApplication(input: AppAgentInput, driver: FormDriver): Promise<AppAgentResult> {
   const actions: string[] = [];
@@ -29,12 +34,13 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
 
   // Re-scan live page text for security halts (CAPTCHA may render after load).
   const halt = detectSecurityHalt(await driver.pageText());
-  if (halt) return { status: "BLOCKED", reason: `${halt} — manual action required, agent paused`, answers, actions, missingQuestions: [] };
+  if (halt) return { status: "BLOCKED", reason: `${halt} — manual action required, agent paused`, answers, actions, missingQuestions: [], missingProfile: [] };
 
   // Analyze fields deterministically (semantic mapping already done by page analyzer upstream).
   const page = analyzePage({ url: input.url, title: input.title, bodyText: "", fields: input.pageFields });
   const required: Array<{ label: string; filled: boolean }> = [];
   const unknownRequired: string[] = [];
+  const missingProfile: string[] = [];
 
   for (const f of page.fields) {
     const key = f.label || f.name;
@@ -63,6 +69,11 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
     if (f.required) {
       unknownRequired.push(key);
       required.push({ label: key, filled: false });
+      // Known field but no trusted value → profile gap (user fills profile once).
+      // Unknown field → one-off question (user answers, optionally saves to bank).
+      if (f.semanticType && f.semanticType !== "resume" && !missingProfile.includes(f.semanticType)) {
+        missingProfile.push(f.semanticType);
+      }
     }
   }
 
@@ -74,7 +85,7 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
     resumeUploaded = true;
     actions.push("resume-uploaded");
   } catch (e) {
-    return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: unknownRequired };
+    return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: unknownRequired, missingProfile };
   }
 
   const gate = runValidationGate({
@@ -82,13 +93,13 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
     requiredFields: required, unknownRequired, fabricated: false,
     policyDecision: input.policyDecision, duplicate: input.duplicate, visibleErrors: [],
   });
-  if (!gate.ok) return { status: "BLOCKED", reason: `Validation gate: ${gate.failures.join("; ")}`, answers, actions, missingQuestions: unknownRequired };
+  if (!gate.ok) return { status: "BLOCKED", reason: `Validation gate: ${gate.failures.join("; ")}`, answers, actions, missingQuestions: unknownRequired, missingProfile };
 
   const urlBefore = driver.url();
   try {
     await driver.clickSubmit();
   } catch (e) {
-    return { status: "FAILED", reason: `Submit failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: [] };
+    return { status: "FAILED", reason: `Submit failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: [], missingProfile: [] };
   }
   const after = await driver.pageText();
   const adapter = pickAdapter(input.url);

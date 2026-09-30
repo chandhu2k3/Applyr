@@ -18,6 +18,11 @@ main{padding:12px 14px;display:grid;gap:10px}
 #cta{border:0;border-radius:8px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#10B981,#059669);color:#fff;width:100%}
 #cta:disabled{opacity:.6;cursor:wait}
 #cta.blocked{background:#fff;color:#D97706;border:1px solid #F59E0B}
+#needBody label{font-size:12px;display:grid;gap:4px}
+#needBody input{border:1px solid #E2E8F0;border-radius:6px;padding:7px 9px;font-size:13px}
+#needBody .tag{font:10px 'JetBrains Mono',monospace;color:#64748B}
+#needSave{border:1px solid #E2E8F0;background:#fff;border-radius:8px;padding:9px 12px;cursor:pointer}
+#needRetry{border:0;border-radius:8px;padding:9px 12px;cursor:pointer;background:#0F172A;color:#fff;font-weight:600}
 #steps{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;font-size:12px}
 #steps li{display:flex;gap:8px;align-items:center;color:#94A3B8}
 #steps li.done{color:#059669}
@@ -63,6 +68,12 @@ footer a{color:#64748B}
   <div class="card">
     <div class="sec">Upload Resume <a href="#" id="openResumes">library →</a></div>
     <div class="muted" id="resLine">—</div>
+  </div>
+  <div class="card" id="needCard" style="display:none">
+    <div class="sec">Needs you — nothing submitted</div>
+    <div id="needBody" style="display:grid;gap:8px;margin-top:8px"></div>
+    <div class="row"><button id="needSave">Save my input</button><button id="needRetry" className="primary">Retry application</button></div>
+    <div class="muted" id="needMsg"></div>
   </div>
   <div class="card"><div id="verdict" class="muted">Idle.</div></div>
 </main>

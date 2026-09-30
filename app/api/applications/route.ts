@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     applicationId: b.applicationId ? String(b.applicationId) : null,
     answers: typeof b.answers === "object" && b.answers ? b.answers : {},
     missingQuestions: Array.isArray(b.missingQuestions) ? b.missingQuestions.map(String).slice(0, 20) : [],
+    missingProfile: Array.isArray(b.missingProfile) ? b.missingProfile.map(String).slice(0, 20) : [],
   });
   return NextResponse.json({ application: rec }, { status: 201 });
 }

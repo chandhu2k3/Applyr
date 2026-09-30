@@ -26,7 +26,7 @@ async function recordBlocked(store: Awaited<ReturnType<typeof getStore>>, runId:
   const app = await store.createApplication({
     company: job.company, title: job.title, location: job.location, url: job.url, platform: job.platform,
     resumeId: "", resumeName: "", status: "BLOCKED", verification: reason,
-    applicationId: null, answers: {}, missingQuestions,
+    applicationId: null, answers: {}, missingQuestions, missingProfile: [],
   });
   return { status: "BLOCKED", runId, applicationId: app.id, detail: { reason, missingQuestions } };
 }
@@ -137,9 +137,9 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
       await log("FAILED", reason);
       await store.finishRun(runId, "failed", "apply").catch(() => {});
       const app = await store.createApplication({
-        company: job.company, title: job.title, location: job.location, url, platform: page.platform,
+    company: job.company, title: job.title, location: job.location, url, platform: page.platform,
         resumeId: resume.resumeId, resumeName: storedResumes.find((r) => r.id === resume.resumeId)?.name ?? resume.resumeId,
-        status: "FAILED", verification: reason, applicationId: null, answers: {}, missingQuestions: [],
+        status: "FAILED", verification: reason, applicationId: null, answers: {}, missingQuestions: [], missingProfile: [],
       });
       return { status: "FAILED", runId, applicationId: app.id, detail: { reason } };
     }
@@ -147,13 +147,14 @@ export async function runApplyPipeline(opts: { url: string; headed?: boolean; dr
     const evidence = "evidence" in result ? result.evidence?.join("; ") ?? "" : "";
     const extAppId = "applicationId" in result ? result.applicationId : null;
     const app = await store.createApplication({
-      company: job.company, title: job.title, location: job.location, url, platform: page.platform,
+    company: job.company, title: job.title, location: job.location, url, platform: page.platform,
       resumeId: resume.resumeId, resumeName: storedResumes.find((r) => r.id === resume.resumeId)?.name ?? resume.resumeId,
       status,
       verification: status === "SUBMITTED" ? evidence : ("reason" in result ? result.reason : ""),
       applicationId: status === "SUBMITTED" ? extAppId : null,
       answers: result.answers,
       missingQuestions: "missingQuestions" in result ? result.missingQuestions : [],
+      missingProfile: "missingProfile" in result ? result.missingProfile : [],
     });
     await store.addAppEvent(app.id, { t: now(), type: "AGENT_RUN", meta: { runId } });
     // Supersede older non-terminal attempts for the same URL.
