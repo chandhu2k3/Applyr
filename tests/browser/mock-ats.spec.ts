@@ -14,6 +14,9 @@ function pageDriver(pageText: () => Promise<string>, impl: Partial<FormDriver> &
     setChecked: async (label, checked) => { await pg.getByLabel(new RegExp(label, "i")).setChecked(checked); },
     upload: async (label, file) => { await pg.locator('input[name="resume"]').setInputFiles(file); },
     clickSubmit: async () => { await Promise.all([pg.waitForLoadState("domcontentloaded").catch(() => {}), pg.getByRole("button", { name: /submit application/i }).click()]); },
+    clickContinue: async () => false,
+    hasSubmitButton: async () => true,
+    revealForm: async () => false,
     pageText,
     url: () => pg.url(),
   };
@@ -37,6 +40,24 @@ test("executor reads the on-page h1 as the job title", async ({ page }) => {
   const ex = new BrowserExecutor();
   ex.attach(page);
   expect(await ex.pageHeading()).toBe("Senior Backend Engineer — Acme");
+});
+
+test("mock multistep: agent walks all steps and submits", async ({ page }) => {
+  await page.goto("/mock-ats/multistep");
+  const ex = new BrowserExecutor();
+  ex.attach(page);
+  const res = await runApplication(
+    {
+      url: page.url(), company: "MockCorp", title: "Product Intern",
+      pageFields: await ex.snapshotFields(),
+      profile: { firstName: "Test", lastName: "Candidate", email: "ms-e2e@example.com" },
+      bank: [{ pattern: "University", answer: "IIT Delhi", category: "FACTUAL" as const, approved: true }],
+      resumePath: "tests/fixtures/resume.pdf", policyDecision: "APPLY", duplicate: false,
+    },
+    ex
+  );
+  expect(res.status).toBe("SUBMITTED");
+  if (res.status === "SUBMITTED") expect(res.applicationId).toMatch(/MOCK-MS-/);
 });
 
 test("mock simple: agent BLOCKS on unknown required CTC (never guesses)", async ({ page }) => {
@@ -83,7 +104,7 @@ test("mock guarded: captcha halts the agent", async ({ page }) => {
   expect(analysis.securityBlock).toBe("CAPTCHA");
   const res = await runApplication(
     { url: page.url(), company: "MockCorp", title: "Designer", pageFields: [], profile: PROFILE, bank: BANK, resumePath: "tests/fixtures/resume.pdf", policyDecision: "APPLY", duplicate: false },
-    { snapshotFields: async () => [], fillText: async () => {}, select: async () => {}, setChecked: async () => {}, upload: async () => {}, clickSubmit: async () => {}, pageText: async () => text, url: () => page.url() }
+    { snapshotFields: async () => [], fillText: async () => {}, select: async () => {}, setChecked: async () => {}, upload: async () => {}, clickSubmit: async () => {}, clickContinue: async () => false, hasSubmitButton: async () => true, revealForm: async () => false, pageText: async () => text, url: () => page.url() }
   );
   expect(res.status).toBe("BLOCKED");
 });

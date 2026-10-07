@@ -15,6 +15,9 @@ export interface FormDriver {
   setChecked(label: string, checked: boolean, name?: string): Promise<void>;
   upload(label: string, filePath: string, name?: string): Promise<void>;
   clickSubmit(): Promise<void>;
+  clickContinue(): Promise<boolean>;
+  hasSubmitButton(): Promise<boolean>;
+  revealForm(beforeCount: number): Promise<boolean>;
   pageText(): Promise<string>;
   url(): string;
 }
@@ -124,17 +127,37 @@ export class BrowserExecutor implements FormDriver {
   }
 
   async clickSubmit(): Promise<void> {
+    await this.clickNamed(/^(submit\b.*|apply(\s+(now|for this job))?|send(\s+application)?)$/i, "submit");
+  }
+
+  /** Step navigation: Continue/Next/Review buttons that are NOT final submission. */
+  async clickContinue(): Promise<boolean> {
+    return this.clickNamed(/^(continue|next|review|save and continue)$/i, "continue");
+  }
+
+  async hasSubmitButton(): Promise<boolean> {
+    const page = this.req();
+    const direct = page.getByRole("button", { name: /^(submit|apply now|apply|send application|send)$/i });
+    if ((await direct.count()) > 0) return true;
+    return (await page.locator('button[type="submit"],input[type="submit"]').count()) > 0;
+  }
+
+  private async clickNamed(name: RegExp, kind: string): Promise<boolean> {
     const page = this.req();
     const before = await this.pageText().catch(() => "");
     const urlBefore = page.url();
-    const btn = page.getByRole("button", { name: /submit|apply|send|continue|next/i });
+    const btn = page.getByRole("button", { name });
+    let clicked = false;
     if ((await btn.count()) > 0) {
       await btn.first().click();
-    } else {
+      clicked = true;
+    } else if (kind === "submit") {
       await page.locator('button[type="submit"],input[type="submit"]').first().click().catch(() => {
         throw new Error("No submit control found — BLOCKED");
       });
+      clicked = true;
     }
+    if (!clicked) return false;
     // Settle: wait for navigation or visible result (SPA re-render / server roundtrip).
     const deadline = Date.now() + 12_000;
     while (Date.now() < deadline) {
@@ -143,7 +166,25 @@ export class BrowserExecutor implements FormDriver {
       const text = await this.pageText().catch(() => before);
       if (urlChanged || text !== before) break;
     }
-    this.actions.push("submit-click");
+    this.actions.push(`${kind}-click`);
+    return true;
+  }
+
+  /**
+   * Reveal hidden application forms. Many career pages show a job description
+   * with an "Apply" button that scrolls to / opens the real form. If the
+   * snapshot looks form-less, click the apply control and re-settle.
+   * Returns true when new fields appeared.
+   */
+  async revealForm(beforeCount: number): Promise<boolean> {
+    const page = this.req();
+    const apply = page.getByRole("button", { name: /apply (for this job|now)?/i }).or(page.getByRole("link", { name: /apply (for this job|now)?/i }));
+    if ((await apply.count()) === 0) return false;
+    await apply.first().click().catch(() => {});
+    await page.waitForTimeout(1500);
+    const after = await this.snapshotFields();
+    this.actions.push(`reveal-form ${beforeCount}->${after.length}`);
+    return after.length > beforeCount;
   }
 
   async pageText(): Promise<string> {

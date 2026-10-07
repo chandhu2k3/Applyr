@@ -12,6 +12,9 @@ function fakeDriver(afterText: string, record: string[]): FormDriver {
     setChecked: async (l, c) => { record.push(`check:${l}=${c}`); },
     upload: async (l, f) => { record.push(`upload:${l}<-${f}`); },
     clickSubmit: async () => { record.push("submit"); },
+    clickContinue: async () => false,
+    hasSubmitButton: async () => true,
+    revealForm: async () => false,
     pageText: async () => afterText,
     url: () => "http://mock/submitted",
   };

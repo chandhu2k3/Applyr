@@ -41,10 +41,48 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
   const required: Array<{ label: string; filled: boolean }> = [];
   const unknownRequired: string[] = [];
   const missingProfile: string[] = [];
+  const handled = new Set<string>();
+  let resumeUploaded = false;
 
-  for (const f of page.fields) {
-    const key = f.label || f.name;
-    if (f.semanticType === "resume") continue; // handled as upload below
+  // Multi-step loop: fill each visible step, advance with Continue, stop at
+  // Submit (or when stuck). Max 5 steps — never loop forever.
+  for (let step = 0; step < 5; step++) {
+    const live = step === 0
+      ? page.fields
+      : analyzePage({ url: input.url, title: input.title, bodyText: "", fields: await driver.snapshotFields() }).fields;
+    for (const f of live) {
+      const key = f.label || f.name;
+      if (!key || handled.has(`${f.tag}:${key}`)) continue;
+      handled.add(`${f.tag}:${key}`);
+      if (f.semanticType === "resume") continue; // upload handled below
+      await fillOne(f, key);
+    }
+
+    // Resume upload as soon as its field is visible (once).
+    if (!resumeUploaded) {
+      const resumefield = live.find((f) => f.semanticType === "resume");
+      if (resumefield) {
+        try {
+          await driver.upload(resumefield.label || "Resume", input.resumePath, resumefield.name || undefined);
+          resumeUploaded = true;
+          actions.push("resume-uploaded");
+        } catch (e) {
+          return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: unknownRequired, missingProfile };
+        }
+      }
+    }
+
+    const pendingUnknown = unknownRequired.length > 0;
+    const hasSubmit = await driver.hasSubmitButton().catch(() => true);
+    if (!pendingUnknown && hasSubmit) break; // ready for validation + submit
+    if (await driver.clickContinue().catch(() => false)) {
+      actions.push(`step-${step + 1}-advanced`);
+      continue;
+    }
+    break; // no continue control: submit phase (gate decides) or stuck
+  }
+
+  async function fillOne(f: { tag: string; type: string; label: string; name: string; required: boolean; semanticType: string | null }, key: string): Promise<void> {
     if (f.semanticType) {
       const v = answerFromProfile(f.semanticType, input.profile);
       if (v.kind === "ANSWERED") {
@@ -54,7 +92,7 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
         answers[key] = v.answer;
         actions.push(`filled:${key}`);
         if (f.required) required.push({ label: key, filled: true });
-        continue;
+        return;
       }
     }
     // Custom question → approved bank only.
@@ -64,7 +102,7 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
       answers[key] = bankHit.answer;
       actions.push(`bank:${key}`);
       if (f.required) required.push({ label: key, filled: true });
-      continue;
+      return;
     }
     if (f.required) {
       unknownRequired.push(key);
@@ -77,15 +115,16 @@ export async function runApplication(input: AppAgentInput, driver: FormDriver): 
     }
   }
 
-  // Resume upload (must succeed).
-  let resumeUploaded = false;
-  try {
-    const resumefield = page.fields.find((f) => f.semanticType === "resume") ?? { label: "Resume", name: "" };
-    await driver.upload(resumefield.label || "Resume", input.resumePath, resumefield.name || undefined);
-    resumeUploaded = true;
-    actions.push("resume-uploaded");
-  } catch (e) {
-    return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: unknownRequired, missingProfile };
+  // Fallback: snapshot may miss lazily-rendered upload widgets — one blind
+  // attempt by conventional label before giving up (old behavior preserved).
+  if (!resumeUploaded) {
+    try {
+      await driver.upload("Resume", input.resumePath, undefined);
+      resumeUploaded = true;
+      actions.push("resume-uploaded-fallback");
+    } catch (e) {
+      return { status: "BLOCKED", reason: `Resume upload failed: ${e instanceof Error ? e.message : e}`, answers, actions, missingQuestions: unknownRequired, missingProfile };
+    }
   }
 
   const gate = runValidationGate({
